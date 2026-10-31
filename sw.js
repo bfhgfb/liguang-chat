@@ -1,5 +1,5 @@
 /* 小杜 Service Worker · 离线缓存 */
-const CACHE = 'xiaodu-v3'
+const CACHE = 'xiaodu-v4'
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png']
 
 self.addEventListener('install', event => {
