@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>小杜 · 下载</title>
+<style>
+  :root {
+    --accent: #ffd60a;
+    --ink: #14141a;
+    --muted: #7c7c86;
+    --line: rgba(20, 20, 26, 0.08);
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", Arial, sans-serif;
+    color: var(--ink);
+    background:
+      radial-gradient(900px 600px at 15% -10%, #ffe98a 0%, transparent 55%),
+      radial-gradient(700px 500px at 105% 8%, #a9d8ff 0%, transparent 55%),
+      linear-gradient(180deg, #f7f7fb 0%, #eef0f6 100%);
+    min-height: 100vh;
+  }
+  .wrap { max-width: 560px; margin: 0 auto; padding: 34px 20px 60px; }
+
+  .hero { text-align: center; }
+  .app-icon {
+    width: 92px; height: 92px; border-radius: 24px;
+    margin: 0 auto 18px;
+    background: linear-gradient(150deg, #fff4b8, #ffd60a 55%, #f0b400);
+    box-shadow: 0 18px 34px rgba(214, 160, 0, .28), inset 0 1px 0 rgba(255,255,255,.7);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 40px; font-weight: 800; color: #3a2c00;
+    letter-spacing: 1px;
+  }
+  h1 { font-size: 27px; margin: 0 0 8px; letter-spacing: .5px; }
+  .sub { color: var(--muted); font-size: 14px; line-height: 1.7; margin: 0 auto; max-width: 380px; }
+
+  .meta {
+    display: inline-flex; gap: 10px; flex-wrap: wrap; justify-content: center;
+    margin: 16px 0 26px; font-size: 12px; color: #6f6f79;
+  }
+  .chip {
+    background: rgba(255,255,255,.72); border: 1px solid rgba(255,255,255,.9);
+    padding: 6px 12px; border-radius: 999px;
+    box-shadow: 0 2px 8px rgba(20,20,30,.05);
+    backdrop-filter: blur(8px);
+  }
+
+  .btn-download {
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    width: 100%; height: 64px; border-radius: 18px;
+    background: linear-gradient(160deg, #ffe680, #ffd60a 55%, #f2bb00);
+    color: #2c2200; font-size: 19px; font-weight: 800; text-decoration: none;
+    box-shadow: 0 16px 30px rgba(214, 160, 0, .3), inset 0 1px 0 rgba(255,255,255,.65);
+    transition: transform .15s ease, box-shadow .15s ease;
+  }
+  .btn-download:active { transform: scale(.97); box-shadow: 0 8px 18px rgba(214,160,0,.28); }
+  .btn-download svg { flex: none; }
+
+  .under { text-align: center; font-size: 12.5px; color: #8a8a94; margin-top: 12px; line-height: 1.7; }
+  .under a { color: #2e6be6; text-decoration: none; }
+
+  .panel {
+    margin-top: 22px; padding: 18px; border-radius: 20px;
+    background: rgba(255,255,255,.66);
+    border: 1px solid rgba(255,255,255,.9);
+    box-shadow: 0 14px 34px rgba(20,20,30,.07);
+    backdrop-filter: blur(14px);
+  }
+  .panel-title { font-size: 14px; font-weight: 700; margin-bottom: 10px; }
+  .steps { margin: 0; padding-left: 18px; color: #63636c; font-size: 13px; line-height: 1.85; }
+
+  .admin-head {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    cursor: pointer; user-select: none;
+  }
+  .admin-head .hint { font-size: 12px; color: #9a9aa3; font-weight: 400; }
+  .admin-body { display: none; margin-top: 14px; }
+  .admin-body.open { display: block; }
+
+  label.field { display: block; font-size: 12.5px; color: #6d6d76; margin: 12px 0 6px; }
+  input[type=text], input[type=password], input[type=number], textarea {
+    width: 100%; padding: 12px 14px; border-radius: 12px; font-size: 14.5px;
+    border: 1px solid var(--line); background: #fff; outline: none;
+    font-family: inherit;
+  }
+  input:focus, textarea:focus { border-color: rgba(46,107,230,.55); box-shadow: 0 0 0 3px rgba(46,107,230,.12); }
+  textarea { resize: vertical; min-height: 64px; }
+  .row2 { display: flex; gap: 12px; }
+  .row2 > div { flex: 1; }
+
+  .file-box {
+    margin-top: 10px; padding: 13px 14px; border-radius: 12px;
+    border: 1px dashed rgba(20,20,26,.2); background: #fff;
+    font-size: 13.5px; color: #6d6d76; cursor: pointer;
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  }
+  .file-box strong { color: var(--ink); font-weight: 600; }
+  input[type=file] { display: none; }
+
+  .btn-primary {
+    width: 100%; height: 50px; border-radius: 14px; border: none; margin-top: 16px;
+    background: #1f1f27; color: #fff; font-size: 15px; font-weight: 700; cursor: pointer;
+  }
+  .btn-primary:disabled { opacity: .5; cursor: default; }
+  .btn-ghost {
+    width: 100%; height: 44px; border-radius: 12px; margin-top: 10px;
+    background: rgba(20,20,26,.06); color: #4a4a52; border: none; font-size: 14px; cursor: pointer;
+  }
+  .bar {
+    height: 8px; border-radius: 999px; background: rgba(20,20,26,.08);
+    overflow: hidden; margin-top: 14px; display: none;
+  }
+  .bar.show { display: block; }
+  .bar > i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #ffd60a, #ffb300); transition: width .2s ease; }
+  .msg { font-size: 12.5px; margin-top: 10px; line-height: 1.6; min-height: 18px; }
+  .msg.ok { color: #1a8f4a; }
+  .msg.err { color: #d23b3b; }
+  .link-row {
+    display: flex; gap: 8px; margin-top: 10px; align-items: center;
+    background: #fff; border-radius: 12px; border: 1px solid var(--line); padding: 10px 12px;
+  }
+  .link-row span { flex: 1; min-width: 0; font-size: 12px; color: #5f5f68; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .link-row button { flex: none; border: none; background: rgba(20,20,26,.06); padding: 7px 12px; border-radius: 9px; font-size: 12px; cursor: pointer; }
+
+  footer { text-align: center; margin-top: 28px; font-size: 11.5px; color: #a0a0a9; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="hero">
+      <div class="app-icon">杜</div>
+      <h1>小杜</h1>
+      <p class="sub">一个轻巧的聊天应用，支持文字、图片、语音、动态和视频。<br />下载安装包，装到安卓手机上直接用。</p>
+
+      <div class="meta">
+        <span class="chip" id="chipVer">版本 --</span>
+        <span class="chip" id="chipSize">安装包 --</span>
+        <span class="chip" id="chipDate">更新 --</span>
+      </div>
+
+      <a class="btn-download" id="downloadBtn" href="#" rel="noopener">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 4v11" /><path d="m7 10 5 5 5-5" /><path d="M5 20h14" />
+        </svg>
+        下载小杜 APK
+      </a>
+      <div class="under">
+        点按钮即可下载（安卓手机会直接弹出安装包）。<br />
+        电脑或 iPhone 可以先用 <a href="../" id="webLink">网页版</a>。
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">安装步骤</div>
+      <ol class="steps">
+        <li>点上方黄色按钮，等待下载完成；</li>
+        <li>在通知栏或文件里点这个 APK，选择「安装」；</li>
+        <li>如果提示「未知来源」，允许浏览器/文件管理器安装；</li>
+        <li>打开后注册账号即可使用，之后有新版本会在应用内自动提示更新。</li>
+      </ol>
+    </div>
+
+    <div class="panel">
+      <div class="admin-head" id="adminToggle">
+        <div class="panel-title" style="margin: 0">上传我的应用</div>
+        <div class="hint" id="adminHint">点开 ›</div>
+      </div>
+      <div class="admin-body" id="adminBody">
+        <div id="loginBox">
+          <label class="field" for="acct">管理员账号</label>
+          <input id="acct" type="text" placeholder="deployer" autocomplete="username" />
+          <label class="field" for="pwd">密码</label>
+          <input id="pwd" type="password" placeholder="登录后即可上传" autocomplete="current-password" />
+          <button class="btn-primary" id="loginBtn">登录</button>
+          <div class="msg" id="loginMsg"></div>
+        </div>
+
+        <div id="uploadBox" style="display: none">
+          <div class="file-box" id="fileBox">
+            <div><div style="font-size:11.5px;color:#9a9aa3">选择 APK 文件</div><strong id="fileName">还没有选择文件</strong></div>
+            <div style="font-size:12px;color:#2e6be6">选择 ›</div>
+          </div>
+          <input id="fileInput" type="file" accept=".apk,application/vnd.android.package-archive" />
+
+          <div class="row2">
+            <div>
+              <label class="field" for="verCode">版本号（整数，必须比上一版大）</label>
+              <input id="verCode" type="number" min="1" step="1" />
+            </div>
+            <div>
+              <label class="field" for="verName">版本名称</label>
+              <input id="verName" type="text" placeholder="例如 1.0.4" />
+            </div>
+          </div>
+          <label class="field" for="notes">更新说明</label>
+          <textarea id="notes" placeholder="这次更新了什么…"></textarea>
+
+          <button class="btn-primary" id="uploadBtn" disabled>上传并发布</button>
+          <div class="bar" id="bar"><i id="barInner"></i></div>
+          <div class="msg" id="uploadMsg"></div>
+          <div class="link-row" id="linkRow" style="display: none">
+            <span id="linkText"></span>
+            <button id="copyBtn">复制</button>
+          </div>
+          <button class="btn-ghost" id="logoutBtn">退出登录</button>
+        </div>
+      </div>
+    </div>
+
+    <footer>小杜 · 安装包与更新信息都走 Supabase 存储，只有管理员账号能上传</footer>
+  </div>
+
+<script>
+(function () {
+  var SUPABASE = 'https://dxibubacwhdsibiggqgg.supabase.co'
+  var KEY = 'sb_publishable_B2KCBqcCYwSz8CmdQ8tRRw_vyUljrco'
+  var APK_URL = SUPABASE + '/storage/v1/object/public/site/liguang-chat.apk'
+  var VERSION_URL = SUPABASE + '/storage/v1/object/public/site/version.json'
+  var TOKEN_KEY = 'xiaodu_admin_token'
+
+  var $ = function (id) { return document.getElementById(id) }
+
+  function fmtSize(bytes) {
+    if (!bytes) return '--'
+    if (bytes > 1024 * 1024) return (bytes / 1024 / 1024).toFixed(1) + ' MB'
+    return Math.round(bytes / 1024) + ' KB'
+  }
+  function fmtDate(ms) {
+    if (!ms) return '--'
+    var d = new Date(ms)
+    var p = function (n) { return n < 10 ? '0' + n : String(n) }
+    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate())
+  }
+
+  function loadInfo() {
+    fetch(VERSION_URL + '?t=' + Date.now(), { cache: 'no-store' })
+      .then(function (r) { return r.ok ? r.json() : null })
+      .then(function (data) {
+        if (!data) return
+        $('chipVer').textContent = '版本 ' + (data.versionName || data.versionCode)
+        var btn = SUPABASE + '/storage/v1/object/public/site/liguang-chat.apk?t=' + (data.updatedAt || data.versionCode)
+        $('downloadBtn').href = btn
+        if (data.versionCode) {
+          $('verCode').value = Number(data.versionCode) + 1
+          $('notes').value = data.notes || ''
+        }
+      })
+      .catch(function () {})
+
+    var xhr = new XMLHttpRequest()
+    xhr.open('HEAD', APK_URL + '?t=' + Date.now())
+    xhr.onload = function () {
+      var len = xhr.getResponseHeader('Content-Length')
+      var last = xhr.getResponseHeader('Last-Modified')
+      if (len) $('chipSize').textContent = '安装包 ' + fmtSize(Number(len))
+      if (last) $('chipDate').textContent = '更新 ' + fmtDate(new Date(last).getTime())
+    }
+    xhr.send()
+  }
+
+  // 没有版本信息时也给下载一个兜底链接
+  $('downloadBtn').href = APK_URL
+
+  /* ---------------- 管理员上传 ---------------- */
+
+  var token = sessionStorage.getItem(TOKEN_KEY) || ''
+  var pickedFile = null
+
+  function showUpload(on) {
+    $('loginBox').style.display = on ? 'none' : 'block'
+    $('uploadBox').style.display = on ? 'block' : 'none'
+  }
+
+  function setMsg(el, text, type) {
+    el.textContent = text || ''
+    el.className = 'msg' + (type ? ' ' + type : '')
+  }
+
+  function api(path, options) {
+    options = options || {}
+    options.headers = Object.assign({ apikey: KEY }, options.headers || {})
+    if (token) options.headers.Authorization = 'Bearer ' + token
+    return fetch(SUPABASE + path, options)
+  }
+
+  function login() {
+    var acct = $('acct').value.trim().replace(/^@/, '')
+    var pwd = $('pwd').value
+    if (!acct || !pwd) { setMsg($('loginMsg'), '请填写账号和密码', 'err'); return }
+    if (acct.indexOf('@') === -1) acct = acct + '@liguang.app'
+    setMsg($('loginMsg'), '正在登录…')
+    $('loginBtn').disabled = true
+    fetch(SUPABASE + '/auth/v1/token?grant_type=password', {
+      method: 'POST',
+      headers: { apikey: KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: acct, password: pwd })
+    })
+      .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j } }) })
+      .then(function (res) {
+        if (!res.ok || !res.j.access_token) throw new Error(res.j.msg || res.j.error_description || '登录失败')
+        if (res.j.user && res.j.user.email && res.j.user.email.indexOf('deployer@') !== 0) {
+          throw new Error('这个账号没有上传权限')
+        }
+        token = res.j.access_token
+        sessionStorage.setItem(TOKEN_KEY, token)
+        setMsg($('loginMsg'), '')
+        showUpload(true)
+      })
+      .catch(function (e) { setMsg($('loginMsg'), e.message || '登录失败', 'err') })
+      .finally(function () { $('loginBtn').disabled = false })
+  }
+
+  function pickFile() {
+    $('fileInput').click()
+  }
+
+  function onFile(e) {
+    var f = e.target.files && e.target.files[0]
+    if (!f) return
+    if (!/\.apk$/i.test(f.name)) { setMsg($('uploadMsg'), '请选择 .apk 文件', 'err'); return }
+    pickedFile = f
+    $('fileName').textContent = f.name + ' · ' + fmtSize(f.size)
+    $('uploadBtn').disabled = false
+    setMsg($('uploadMsg'), '')
+  }
+
+  function uploadFile(url, file, ctype, onProgress) {
+    return new Promise(function (resolve, reject) {
+      var xhr = new XMLHttpRequest()
+      xhr.open('POST', url)
+      xhr.setRequestHeader('apikey', KEY)
+      xhr.setRequestHeader('Authorization', 'Bearer ' + token)
+      xhr.setRequestHeader('x-upsert', 'true')
+      xhr.setRequestHeader('Content-Type', ctype)
+      xhr.upload.onprogress = function (ev) {
+        if (ev.lengthComputable && onProgress) onProgress(ev.loaded / ev.total)
+      }
+      xhr.onload = function () {
+        if (xhr.status >= 200 && xhr.status < 300) resolve(xhr.responseText)
+        else reject(new Error('上传失败（' + xhr.status + '）' + (xhr.responseText || '').slice(0, 80)))
+      }
+      xhr.onerror = function () { reject(new Error('网络错误，上传失败')) }
+      xhr.send(file)
+    })
+  }
+
+  function upload() {
+    if (!pickedFile) { setMsg($('uploadMsg'), '请先选择 APK 文件', 'err'); return }
+    var code = Number($('verCode').value)
+    var name = $('verName').value.trim() || String(code)
+    if (!code) { setMsg($('uploadMsg'), '请填写版本号（整数）', 'err'); return }
+
+    $('uploadBtn').disabled = true
+    $('logoutBtn').disabled = true
+    $('bar').className = 'bar show'
+    $('barInner').style.width = '0%'
+    setMsg($('uploadMsg'), '正在上传安装包…')
+
+    uploadFile(APK_URL, pickedFile, 'application/vnd.android.package-archive', function (p) {
+      $('barInner').style.width = Math.round(p * 92) + '%'
+    })
+      .then(function () {
+        setMsg($('uploadMsg'), '安装包上传完成，正在写入更新信息…')
+        var body = JSON.stringify({
+          versionCode: code,
+          versionName: name,
+          apkUrl: APK_URL,
+          notes: $('notes').value.trim() || '修复问题并优化体验',
+          updatedAt: Date.now()
+        })
+        return uploadFile(VERSION_URL, body, 'application/json', function () {})
+      })
+      .then(function () {
+        $('barInner').style.width = '100%'
+        setMsg($('uploadMsg'), '发布成功！所有用户下次打开应用会收到更新提示。', 'ok')
+        var link = APK_URL + '?t=' + Date.now()
+        $('linkRow').style.display = 'flex'
+        $('linkText').textContent = link
+        $('downloadBtn').href = link
+        $('chipVer').textContent = '版本 ' + name
+        $('chipSize').textContent = '安装包 ' + fmtSize(pickedFile.size)
+        pickedFile = null
+        $('fileName').textContent = '还没有选择文件'
+        $('fileInput').value = ''
+        $('verName').value = ''
+        $('verCode').value = code + 1
+      })
+      .catch(function (e) {
+        $('bar').className = 'bar'
+        setMsg($('uploadMsg'), e.message || '上传失败', 'err')
+      })
+      .finally(function () {
+        $('uploadBtn').disabled = !pickedFile
+        $('logoutBtn').disabled = false
+      })
+  }
+
+  function copyLink() {
+    var text = $('linkText').textContent
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function () { setMsg($('uploadMsg'), '下载链接已复制', 'ok') })
+    } else {
+      var ta = document.createElement('textarea')
+      ta.value = text
+      document.body.appendChild(ta)
+      ta.select()
+      try { document.execCommand('copy'); setMsg($('uploadMsg'), '下载链接已复制', 'ok') } catch (e) {}
+      document.body.removeChild(ta)
+    }
+  }
+
+  function logout() {
+    token = ''
+    sessionStorage.removeItem(TOKEN_KEY)
+    showUpload(false)
+    setMsg($('loginMsg'), '已退出登录')
+    $('pwd').value = ''
+  }
+
+  $('adminToggle').addEventListener('click', function () {
+    var body = $('adminBody')
+    var open = !body.classList.contains('open')
+    body.classList.toggle('open', open)
+    $('adminHint').textContent = open ? '收起 ˄' : '点开 ›'
+  })
+  $('loginBtn').addEventListener('click', login)
+  $('pwd').addEventListener('keyup', function (e) { if (e.key === 'Enter') login() })
+  $('fileBox').addEventListener('click', pickFile)
+  $('fileInput').addEventListener('change', onFile)
+  $('uploadBtn').addEventListener('click', upload)
+  $('copyBtn').addEventListener('click', copyLink)
+  $('logoutBtn').addEventListener('click', logout)
+
+  if (token) showUpload(true)
+  loadInfo()
+})()
+</script>
+</body>
+</html>
