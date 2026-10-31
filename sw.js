@@ -1,5 +1,5 @@
-/* 璃光聊 Service Worker · 离线缓存 */
-const CACHE = 'liguang-v1'
+/* 小杜 Service Worker · 离线缓存 */
+const CACHE = 'xiaodu-v3'
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png']
 
 self.addEventListener('install', event => {
@@ -28,6 +28,9 @@ self.addEventListener('fetch', event => {
   const url = new URL(req.url)
   if (url.origin !== self.location.origin) return
   if (url.pathname.startsWith('/api') || url.pathname.startsWith('/socket.io') || url.pathname.startsWith('/uploads')) return
+
+  // 视频/图片等媒体直接走浏览器原生请求，避免缓存住旧视频导致“视频不更新”
+  if (/\.(mp4|webm|mov|m4v)$/i.test(url.pathname) || req.headers.has('range')) return
 
   if (req.mode === 'navigate') {
     event.respondWith(
