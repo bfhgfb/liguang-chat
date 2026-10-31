@@ -1,5 +1,5 @@
 /* 小杜 Service Worker · 离线缓存 */
-const CACHE = 'xiaodu-v4'
+const CACHE = 'xiaodu-v5'
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png']
 
 self.addEventListener('install', event => {
@@ -34,7 +34,7 @@ self.addEventListener('fetch', event => {
 
   if (req.mode === 'navigate') {
     event.respondWith(
-      fetch(req)
+      fetch(req, { cache: 'reload' })
         .then(res => {
           const copy = res.clone()
           caches.open(CACHE).then(cache => cache.put('./index.html', copy)).catch(() => {})
