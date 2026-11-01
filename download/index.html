@@ -149,6 +149,7 @@
       </a>
       <div class="under">
         点按钮即可下载（安卓手机会直接弹出安装包）。<br />
+        按钮没反应就点 <a href="https://cdn.jsdelivr.net/gh/bfhgfb/liguang-chat@main/apk/liguang-chat.apk" id="backupLink">备用下载线路</a>。<br />
         电脑或 iPhone 可以先用 <a href="../" id="webLink">网页版</a>。
       </div>
     </div>
@@ -210,15 +211,18 @@
       </div>
     </div>
 
-    <footer>小杜 · 安装包与更新信息都走 Supabase 存储，只有管理员账号能上传</footer>
+    <footer>小杜 · 安装包放在本站（GitHub Pages），不依赖 Supabase 域名；更新信息仍有备用线路</footer>
   </div>
 
 <script>
 (function () {
   var SUPABASE = 'https://dxibubacwhdsibiggqgg.supabase.co'
   var KEY = 'sb_publishable_B2KCBqcCYwSz8CmdQ8tRRw_vyUljrco'
-  var APK_URL = SUPABASE + '/storage/v1/object/public/site/liguang-chat.apk'
-  var VERSION_URL = SUPABASE + '/storage/v1/object/public/site/version.json'
+  // 安装包放在本站（GitHub Pages），不依赖 Supabase 域名，国内网络更容易下载
+  var APK_URL = '../apk/liguang-chat.apk'
+  var VERSION_URL = '../apk/version.json'
+  var SUPABASE_APK = SUPABASE + '/storage/v1/object/public/site/liguang-chat.apk'
+  var SUPABASE_VERSION = SUPABASE + '/storage/v1/object/public/site/version.json'
   var TOKEN_KEY = 'xiaodu_admin_token'
 
   var $ = function (id) { return document.getElementById(id) }
@@ -238,11 +242,18 @@
   function loadInfo() {
     fetch(VERSION_URL + '?t=' + Date.now(), { cache: 'no-store' })
       .then(function (r) { return r.ok ? r.json() : null })
+      .catch(function () { return null })
+      .then(function (data) {
+        if (data) return data
+        // 本站版本信息取不到时，回退到 Supabase 的副本
+        return fetch(SUPABASE_VERSION + '?t=' + Date.now(), { cache: 'no-store' })
+          .then(function (r) { return r.ok ? r.json() : null })
+          .catch(function () { return null })
+      })
       .then(function (data) {
         if (!data) return
         $('chipVer').textContent = '版本 ' + (data.versionName || data.versionCode)
-        var btn = SUPABASE + '/storage/v1/object/public/site/liguang-chat.apk?t=' + (data.updatedAt || data.versionCode)
-        $('downloadBtn').href = btn
+        $('downloadBtn').href = APK_URL + '?t=' + (data.updatedAt || data.versionCode)
         if (data.versionCode) {
           $('verCode').value = Number(data.versionCode) + 1
           $('notes').value = data.notes || ''
@@ -359,7 +370,7 @@
     $('barInner').style.width = '0%'
     setMsg($('uploadMsg'), '正在上传安装包…')
 
-    uploadFile(APK_URL, pickedFile, 'application/vnd.android.package-archive', function (p) {
+    uploadFile(SUPABASE_APK, pickedFile, 'application/vnd.android.package-archive', function (p) {
       $('barInner').style.width = Math.round(p * 92) + '%'
     })
       .then(function () {
@@ -367,16 +378,16 @@
         var body = JSON.stringify({
           versionCode: code,
           versionName: name,
-          apkUrl: APK_URL,
+          apkUrl: SUPABASE_APK,
           notes: $('notes').value.trim() || '修复问题并优化体验',
           updatedAt: Date.now()
         })
-        return uploadFile(VERSION_URL, body, 'application/json', function () {})
+        return uploadFile(SUPABASE_VERSION, body, 'application/json', function () {})
       })
       .then(function () {
         $('barInner').style.width = '100%'
-        setMsg($('uploadMsg'), '发布成功！所有用户下次打开应用会收到更新提示。', 'ok')
-        var link = APK_URL + '?t=' + Date.now()
+        setMsg($('uploadMsg'), '已上传到备用存储。网页上的正式下载按钮指向 GitHub Pages 上的安装包，需要开发者重新发布才会同步更新。', 'ok')
+        var link = SUPABASE_APK + '?t=' + Date.now()
         $('linkRow').style.display = 'flex'
         $('linkText').textContent = link
         $('downloadBtn').href = link

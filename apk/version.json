@@ -1,0 +1,1 @@
+{"versionCode": 5, "versionName": "1.0.4", "apkUrl": "https://bfhgfb.github.io/liguang-chat/apk/liguang-chat.apk", "notes": "修复语音消息无法录音/发送：改为原生录音，最长10秒，声音无损压缩到最小体积", "updatedAt": 1793505094192}
