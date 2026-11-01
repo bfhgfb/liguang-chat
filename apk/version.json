@@ -1,1 +1,1 @@
-{"versionCode": 8, "versionName": "1.0.7", "apkUrl": "https://bfhgfb.github.io/liguang-chat/apk/liguang-chat.apk", "notes": "视频通话稳定性优化：改用服务器信令+每 3 秒自动补拉，来电会响铃并震动，接听更快更稳", "updatedAt": 1793527200000}
+{"versionCode": 9, "versionName": "1.0.8", "apkUrl": "https://bfhgfb.github.io/liguang-chat/apk/liguang-chat.apk", "notes": "断网也能登录：内置离线页面，没网时打开 App 照样能进；联网后自动同步消息", "updatedAt": 1793527800000}
