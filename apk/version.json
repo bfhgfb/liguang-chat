@@ -1,1 +1,1 @@
-{"versionCode": 7, "versionName": "1.0.6", "apkUrl": "https://bfhgfb.github.io/liguang-chat/apk/liguang-chat.apk", "notes": "新增好友视频通话（可切换前后摄像头）；发图片、换头像改为直接打开相册", "updatedAt": 1793527116958}
+{"versionCode": 8, "versionName": "1.0.7", "apkUrl": "https://bfhgfb.github.io/liguang-chat/apk/liguang-chat.apk", "notes": "视频通话稳定性优化：改用服务器信令+每 3 秒自动补拉，来电会响铃并震动，接听更快更稳", "updatedAt": 1793527200000}
