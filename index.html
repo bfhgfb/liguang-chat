@@ -16106,16 +16106,20 @@ async function Dp(t, e, r) {
     const s = n + na;
     let i;
     try {
-        i = await P0(() => ve.auth.signUp({
-            email: s,
-            password: e,
-            options: {
-                data: {
-                    username: n,
-                    nickname: String(r || "").trim() || n
+        i = await P0(async () => {
+            const y = await ve.auth.signUp({
+                email: s,
+                password: e,
+                options: {
+                    data: {
+                        username: n,
+                        nickname: String(r || "").trim() || n
+                    }
                 }
-            }
-        }))
+            });
+            if (y.error && Or(y.error)) throw y.error;
+            return y
+        })
     } catch (l) {
         throw la(l)
     }
