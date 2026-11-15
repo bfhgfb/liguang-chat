@@ -16716,7 +16716,7 @@ function xdPreload(t) {
 
 function xdSaveImage(t) {
     if (!t) return;
-    const e = /iPad|iPhone|iPod/.test(navigator.userAgent) || navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
+    const e = /Android|iPad|iPhone|iPod/.test(navigator.userAgent) || navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
     const r = n => {
         if (e && navigator.canShare) try {
             const s = new File([n], xdImgName(n), {
@@ -16726,11 +16726,11 @@ function xdSaveImage(t) {
                     files: [s]
                 })) return navigator.share({
                     files: [s]
-                }).then(() => te("已保存")).catch(() => {}), !0
+                }).then(() => te("已发送到系统面板")).catch(() => {}), !0
         } catch (i) {}
         const s = URL.createObjectURL(n),
             i = document.createElement("a");
-        return i.href = s, i.download = xdImgName(n), i.rel = "noopener", document.body.appendChild(i), i.click(), i.remove(), setTimeout(() => URL.revokeObjectURL(s), 5e3), te("图片已保存"), !0
+        return i.href = s, i.download = xdImgName(n), i.rel = "noopener", document.body.appendChild(i), i.click(), i.remove(), setTimeout(() => URL.revokeObjectURL(s), 5e3), te("图片已保存到下载目录"), !0
     };
     if (xdBlob) {
         r(xdBlob);
@@ -16761,7 +16761,11 @@ function xdImageMenu(t) {
         r.remove(), xdSaveImage(t)
     };
     const i = document.createElement("button");
-    i.textContent = "取消", i.style.cssText = "height:50px;border:0;border-radius:12px;background:#fff;font-size:16px;color:#8b8b93;", i.onclick = () => r.remove(), n.appendChild(s), n.appendChild(i), r.appendChild(n), document.body.appendChild(r)
+    i.textContent = "打开原图（长按保存）", i.style.cssText = "height:50px;border:0;border-radius:12px;background:#f2f2f6;font-size:16px;font-weight:500;color:#111;", i.onclick = () => {
+        r.remove(), window.open(t, "_blank"), te("请长按图片选择「保存图片」")
+    };
+    const o = document.createElement("button");
+    o.textContent = "取消", o.style.cssText = "height:50px;border:0;border-radius:12px;background:#fff;font-size:16px;color:#8b8b93;", o.onclick = () => r.remove(), n.appendChild(s), n.appendChild(i), n.appendChild(o), r.appendChild(n), document.body.appendChild(r)
 }
 
 function xdPressStart(t, e) {
