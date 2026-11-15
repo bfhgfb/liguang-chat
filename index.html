@@ -18701,6 +18701,10 @@ const b5 = {
             sub: {
                 type: Boolean,
                 default: !1
+            },
+            titleClick: {
+                type: Function,
+                default: null
             }
         },
         setup(t) {
@@ -18721,8 +18725,12 @@ const b5 = {
                 class: Ge(["nav-title", {
                     left: t.left,
                     sub: t.sub
-                }])
-            }, V(t.title), 3), f("div", J5, [vh(n.$slots, "right", {}, () => [s[0] || (s[0] = f("span", {
+                }]),
+                onClick: t.titleClick || void 0,
+                style: t.titleClick ? {
+                    cursor: "pointer"
+                } : void 0
+            }, V(t.title), 15), f("div", J5, [vh(n.$slots, "right", {}, () => [s[0] || (s[0] = f("span", {
                 class: "nav-spacer"
             }, null, -1))])])])]))
         }
@@ -19220,7 +19228,8 @@ const Sm = {
                 gmem = se(null),
                 gmute = se(!1),
                 gfile = se(null),
-                gup = se(!1);
+                gup = se(!1),
+                ginfo = se(!1);
             let _ = null,
                 F = [],
                 v = null,
@@ -19633,6 +19642,9 @@ const Sm = {
             function pickGroupAvatar() {
                 gfile.value && gfile.value.click()
             }
+            function openGroupInfo() {
+                i.value && i.value.type === "group" && (ginfo.value = !0)
+            }
             async function onGroupAvatar(ev) {
                 const f0 = ev.target.files && ev.target.files[0];
                 ev.target.value = "";
@@ -19802,9 +19814,18 @@ const Sm = {
             }), (Y, ie) => (R(), I("div", Sm, [G(_t, {
                 title: i.value ? lgHeadTitle.value : "聊天",
                 back: "",
-                sub: !0
+                sub: !0,
+                titleClick: i.value && i.value.type === "group" ? openGroupInfo : void 0
             }, {
-                right: Qr(() => [i.value && i.value.type === "group" && canManage.value ? (R(), I("button", {
+                right: Qr(() => [i.value && i.value.type === "group" && !canManage.value ? (R(), I("button", {
+                    key: "gif",
+                    class: "icon-btn",
+                    "aria-label": "群资料",
+                    onClick: openGroupInfo
+                }, [G(ge, {
+                    name: "info",
+                    size: 21
+                })])) : xe("", !0), i.value && i.value.type === "group" && canManage.value ? (R(), I("button", {
                     key: "gs",
                     class: "icon-btn",
                     "aria-label": "群设置",
@@ -19829,7 +19850,7 @@ const Sm = {
                     size: 24
                 })])]),
                 _: 1
-            }, 8, ["title"]), f("div", {
+            }, 8, ["title", "titleClick"]), f("div", {
                 ref_key: "scrollRef",
                 ref: x,
                 class: "scroll chat-body"
@@ -20000,6 +20021,30 @@ const Sm = {
                         isOwner.value ? f("button", { class: "sheet-item danger", onClick: dissolveGroup }, "解散群聊") : f("button", { class: "sheet-item danger", onClick: leaveGroup }, "退出群聊")
                     ]),
                     f("button", { class: "sheet-cancel", onClick: ev => gpanel.value = !1 }, "关闭")
+                ])])) : xe("", !0), ginfo.value ? (R(), I("div", {
+                    key: "ginfo",
+                    class: "mask",
+                    onClick: Jt(ev => ginfo.value = !1, ["self"])
+                }, [f("div", { class: "sheet" }, [
+                    f("div", { class: "sheet-title" }, "群资料"),
+                    f("div", { class: "sheet-list" }, [
+                        f("div", { class: "sheet-item", style: { justifyContent: "flex-start", gap: "10px", padding: "0 16px" } }, [
+                            G(Qe, { id: "G" + i.value.id, name: i.value.name || "", src: i.value.avatarUrl || "", size: 42 }, null, 8, ["id", "name", "src"]),
+                            f("div", { style: { display: "flex", flexDirection: "column", gap: "2px" } }, [
+                                f("span", { style: { fontSize: "15px", fontWeight: "600" } }, i.value.name || "群聊"),
+                                f("span", { style: { fontSize: "12px", color: "#8b8b93" } }, "共 " + ((i.value.members || []).length) + " 人")
+                            ])
+                        ]),
+                        f("div", { class: "sheet-item", style: { justifyContent: "space-between", padding: "0 16px" }, onClick: copyGroupNo }, [
+                            f("span", null, "群号"),
+                            f("span", { style: { color: "#2e6be6", fontSize: "13px" } }, V(i.value.groupNo) + " · 复制")
+                        ]),
+                        f("div", { class: "sheet-item", style: { justifyContent: "space-between", padding: "0 16px" } }, [
+                            f("span", null, "群主"),
+                            f("span", { style: { color: "#8b8b93", fontSize: "13px" } }, gName((i.value.members || []).find(x => x.role === "owner")))
+                        ])
+                    ]),
+                    f("button", { class: "sheet-cancel", onClick: ev => ginfo.value = !1 }, "关闭")
                 ])])) : xe("", !0), gmem.value ? (R(), I("div", {
                     key: "gm",
                     class: "mask",
