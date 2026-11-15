@@ -19215,7 +19215,9 @@ const Sm = {
                 greqs = se([]),
                 ginvite = se(!1),
                 gsel = se([]),
-                gbusy = se(!1);
+                gbusy = se(!1),
+                gmem = se(null),
+                gmute = se(!1);
             let _ = null,
                 F = [],
                 v = null,
@@ -19262,7 +19264,12 @@ const Sm = {
 
             function T(Y) {
                 var ie;
-                return Y.fromId === s.value ? ((ie = b.me) == null ? void 0 : ie.nickname) || "我" : ut(Vs(Y.fromId))
+                if (Y.fromId === s.value) return ((ie = b.me) == null ? void 0 : ie.nickname) || "我";
+                if (i.value && i.value.type === "group") {
+                    const m2 = (i.value.members || []).find(x => x.id === Y.fromId);
+                    if (m2 && m2.groupNick) return m2.groupNick
+                }
+                return ut(Vs(Y.fromId))
             }
 
             function O(Y) {
@@ -19525,7 +19532,17 @@ const Sm = {
                 }
             }
             const isOwner = me(() => !!(i.value && b.me && i.value.ownerId === b.me.id)),
+                myRole = me(() => (i.value && i.value.myRole) || (isOwner.value ? "owner" : "member")),
+                canManage = me(() => myRole.value === "owner" || myRole.value === "admin"),
                 inviteCandidates = me(() => b.friends.filter(f => f && !((i.value && i.value.members || []).some(x => x.id === f.id))));
+
+            function gName(mm) {
+                return mm ? mm.groupNick || ut(mm) : ""
+            }
+
+            function isMuted(mm) {
+                return !!(mm && mm.mutedUntil && mm.mutedUntil > Date.now())
+            }
 
             function roleOf(id) {
                 const mm = i.value && i.value.members || [];
@@ -19544,7 +19561,7 @@ const Sm = {
             }
             async function openGroupPanel() {
                 d.value = !1, gpanel.value = !0, greqs.value = [];
-                if (isOwner.value) try {
+                if (canManage.value) try {
                     greqs.value = await listGroupReqs(n)
                 } catch (e) {}
             }
@@ -19605,6 +19622,168 @@ const Sm = {
                     te(ok ? "群号已复制" : "复制失败")
                 }
             }
+
+            function openMember(mm) {
+                gmem.value = mm, gmute.value = !1
+            }
+
+            async function groupRpc(name, params, okText) {
+                if (gbusy.value) return null;
+                gbusy.value = !0;
+                try {
+                    const {
+                        data: e,
+                        error: r2
+                    } = await ve.rpc(name, params);
+                    if (r2) throw Pe(r2);
+                    e && e.id && Mu(e), gmem.value = null, gmute.value = !1, await $t(), okText && te(okText);
+                    return e
+                } catch (e) {
+                    te(e.message || "操作失败");
+                    return null
+                } finally {
+                    gbusy.value = !1
+                }
+            }
+
+            function toggleAdmin() {
+                const mm = gmem.value;
+                if (!mm) return;
+                mm.role === "admin" ? groupRpc("group_set_admin", {
+                    p_cid: n,
+                    p_uid: mm.id,
+                    p_on: !1
+                }, "已取消管理员") : groupRpc("group_set_admin", {
+                    p_cid: n,
+                    p_uid: mm.id,
+                    p_on: !0
+                }, "已设为管理员")
+            }
+
+            function muteMember(minutes) {
+                const mm = gmem.value;
+                if (!mm) return;
+                groupRpc("group_set_mute", {
+                    p_cid: n,
+                    p_uid: mm.id,
+                    p_minutes: minutes
+                }, minutes > 0 ? "已禁言" : "已解除禁言")
+            }
+
+            async function kickMember() {
+                const mm = gmem.value;
+                if (!mm) return;
+                if (await ur(`确定将「${gName(mm)}」移出本群？`, {
+                        danger: !0
+                    })) await groupRpc("group_kick", {
+                    p_cid: n,
+                    p_uid: mm.id
+                }, "已移出群聊")
+            }
+
+            async function transferOwner() {
+                const mm = gmem.value;
+                if (!mm) return;
+                if (await ur(`确定把群主转让给「${gName(mm)}」？转让后你将成为普通成员。`, {
+                        danger: !0
+                    })) await groupRpc("group_transfer", {
+                    p_cid: n,
+                    p_uid: mm.id
+                }, "已转让群主")
+            }
+
+            function toggleMuteAll() {
+                const on = !(i.value && i.value.muteAll);
+                groupRpc("group_set_mute_all", {
+                    p_cid: n,
+                    p_on: on
+                }, on ? "已开启全员禁言" : "已关闭全员禁言")
+            }
+
+            async function editAnnouncement() {
+                if (!canManage.value) return;
+                const v = await k6("群公告", {
+                    value: (i.value && i.value.announcement) || "",
+                    placeholder: "输入群公告，最多 1000 字",
+                    maxlength: 1000
+                });
+                if (v === null) return;
+                await groupRpc("group_set_announcement", {
+                    p_cid: n,
+                    p_text: v
+                }, "群公告已更新")
+            }
+
+            async function editGroupName() {
+                if (!canManage.value) return;
+                const v = await k6("修改群名称", {
+                    value: (i.value && i.value.name) || "",
+                    placeholder: "输入群名称",
+                    maxlength: 30
+                });
+                if (v === null) return;
+                if (!String(v).trim()) return te("群名不能为空");
+                await groupRpc("group_set_name", {
+                    p_cid: n,
+                    p_name: v
+                }, "群名称已修改")
+            }
+
+            async function editMyNick() {
+                const mine = (i.value && i.value.members || []).find(x => x.id === s.value) || {};
+                const v = await k6("我的群名片", {
+                    value: mine.groupNick || "",
+                    placeholder: "留空则显示昵称",
+                    maxlength: 20
+                });
+                if (v === null) return;
+                await groupRpc("group_set_nick", {
+                    p_cid: n,
+                    p_nick: v
+                }, "群名片已更新")
+            }
+
+            async function leaveGroup() {
+                if (!await ur("退出后需要重新申请才能进群，确定退出？", {
+                        danger: !0
+                    })) return;
+                if (gbusy.value) return;
+                gbusy.value = !0;
+                try {
+                    const {
+                        error: e
+                    } = await ve.rpc("group_leave", {
+                        p_cid: n
+                    });
+                    if (e) throw Pe(e);
+                    gpanel.value = !1, te("已退出群聊"), r.replace("/chats"), await $t()
+                } catch (e) {
+                    te(e.message || "操作失败")
+                } finally {
+                    gbusy.value = !1
+                }
+            }
+
+            async function dissolveGroup() {
+                if (!await ur("解散后群聊和全部消息都会被删除，且无法恢复。确定解散？", {
+                        danger: !0
+                    })) return;
+                if (gbusy.value) return;
+                gbusy.value = !0;
+                try {
+                    const {
+                        error: e
+                    } = await ve.rpc("group_dissolve", {
+                        p_cid: n
+                    });
+                    if (e) throw Pe(e);
+                    gpanel.value = !1, te("群已解散"), r.replace("/chats"), await $t()
+                } catch (e) {
+                    te(e.message || "操作失败")
+                } finally {
+                    gbusy.value = !1
+                }
+            }
             return Nt(H), W0(() => {
                 ux(null), m.value && X()
             }), Rt(() => o.value.length, () => {
@@ -19658,7 +19837,7 @@ const Sm = {
                 id: ae.fromId === s.value ? s.value : ae.fromId,
                 name: T(ae),
                 size: 36
-            }, null, 8, ["id", "name"]), f("div", Im, [i.value && i.value.type === "group" && ae.fromId !== s.value ? (R(), I("div", $m, [zt(V(T(ae)) + " ", 1), roleOf(ae.fromId) === "owner" ? (R(), I("span", { key: "o", style: { marginLeft: "5px", fontSize: "10px", fontWeight: "700", color: "#6b4a00", padding: "1px 5px", borderRadius: "5px", background: "linear-gradient(135deg,#ffe9a8,#f6c453)" } }, "群主")) : roleOf(ae.fromId) === "member" ? (R(), I("span", { key: "m", style: { marginLeft: "5px", fontSize: "10px", fontWeight: "600", color: "#6b6b74", padding: "1px 5px", borderRadius: "5px", background: "#f0f0f4" } }, "成员")) : xe("", !0)])) : xe("", !0), f("div", {
+            }, null, 8, ["id", "name"]), f("div", Im, [i.value && i.value.type === "group" && ae.fromId !== s.value ? (R(), I("div", $m, [zt(V(T(ae)) + " ", 1), roleOf(ae.fromId) === "owner" ? (R(), I("span", { key: "o", style: { marginLeft: "5px", fontSize: "10px", fontWeight: "700", color: "#6b4a00", padding: "1px 5px", borderRadius: "5px", background: "linear-gradient(135deg,#ffe9a8,#f6c453)" } }, "群主")) : roleOf(ae.fromId) === "admin" ? (R(), I("span", { key: "a", style: { marginLeft: "5px", fontSize: "10px", fontWeight: "700", color: "#0d6b3f", padding: "1px 5px", borderRadius: "5px", background: "#e3f6ec" } }, "管理员")) : roleOf(ae.fromId) === "member" ? (R(), I("span", { key: "m", style: { marginLeft: "5px", fontSize: "10px", fontWeight: "600", color: "#6b6b74", padding: "1px 5px", borderRadius: "5px", background: "#f0f0f4" } }, "成员")) : xe("", !0)])) : xe("", !0), f("div", {
                 class: Ge(["bubble", {
                     mine: ae.fromId === s.value,
                     img: ae.type === "image" && !ae.recalled,
@@ -19743,7 +19922,89 @@ const Sm = {
                 items: p.value,
                 onSelect: Se,
                 onClose: ie[4] || (ie[4] = ae => d.value = !1)
-            }, null, 8, ["visible", "items"]), gpanel.value ? (R(), I("div", { key: "gp", class: "mask", onClick: Jt(ev => gpanel.value = !1, ["self"]) }, [f("div", { class: "sheet" }, [f("div", { class: "sheet-title" }, "群设置", -1), f("div", { class: "sheet-list" }, [f("div", { class: "sheet-item", onClick: copyGroupNo }, [f("span", null, "群号：" + i.value.groupNo, -1), f("span", { style: { marginLeft: "auto", color: "#2e6be6", fontSize: "13px" } }, "复制", -1)]), isOwner.value ? (R(), I("button", { key: "jm", class: "sheet-item", onClick: toggleJoinMode }, [f("span", null, "加群方式：" + ((i.value.joinMode || "review") === "open" ? "无需审核" : "需群主审核"), 1), f("span", { style: { marginLeft: "auto", color: "#8b8b93", fontSize: "13px" } }, "点击切换", -1)])) : xe("", !0), f("button", { key: "inv", class: "sheet-item", onClick: openInvite }, [f("span", null, "邀请好友进群", -1), G(ge, { name: "plus", size: 16, style: { marginLeft: "auto", color: "#8b8b93" } })])]), f("div", { class: "sheet-list" }, [f("div", { class: "sheet-title" }, "群成员（" + (i.value.members || []).length + "）", 1), (R(!0), I(ye, null, He((i.value.members || []), mm => (R(), I("div", { key: mm.id, class: "sheet-item", style: { justifyContent: "flex-start", gap: "10px" } }, [G(Qe, { id: mm.id, name: ut(mm), size: 30 }, null, 8, ["id", "name"]), f("span", null, ut(mm), -1), mm.role === "owner" ? (R(), I("span", { key: "o", style: { marginLeft: "auto", fontSize: "10px", fontWeight: "700", color: "#6b4a00", padding: "1px 6px", borderRadius: "5px", background: "linear-gradient(135deg,#ffe9a8,#f6c453)" } }, "群主")) : mm.role === "member" ? (R(), I("span", { key: "m", style: { marginLeft: "auto", fontSize: "10px", fontWeight: "600", color: "#6b6b74", padding: "1px 6px", borderRadius: "5px", background: "#f0f0f4" } }, "成员")) : xe("", !0)]))), 128))]), isOwner.value && greqs.value.length ? (R(), I("div", { key: "req", class: "sheet-list" }, [f("div", { class: "sheet-title" }, "入群申请", -1), (R(!0), I(ye, null, He(greqs.value, rr => (R(), I("div", { key: rr.id, class: "sheet-item", style: { justifyContent: "flex-start", gap: "8px" } }, [G(Qe, { id: rr.user.id, name: ut(rr.user), size: 30 }, null, 8, ["id", "name"]), f("span", null, ut(rr.user), -1), f("button", { class: "mock-btn", style: { marginLeft: "auto", background: "var(--accent)", color: "#232300", "font-weight": "700" }, onClick: ev => approveGroupReq(rr.id, true) }, "同意", 8, ["onClick"]), f("button", { class: "mock-btn", onClick: ev => approveGroupReq(rr.id, false) }, "拒绝", 8, ["onClick"])]))), 128))])) : xe("", !0), f("button", { class: "sheet-cancel", onClick: ev => gpanel.value = !1 }, "关闭")])])) : xe("", !0), ginvite.value ? (R(), I("div", { key: "gi", class: "mask", onClick: Jt(ev => ginvite.value = !1, ["self"]) }, [f("div", { class: "sheet" }, [f("div", { class: "sheet-title" }, "邀请好友进群", -1), f("div", { class: "group-friends", style: { margin: "0 10px 10px" } }, [inviteCandidates.value.length ? (R(!0), I(ye, null, He(inviteCandidates.value, ff => (R(), I("div", { key: ff.id, class: "group-friend", onClick: ev => toggleSel(ff.id) }, [G(Qe, { id: ff.id, name: ut(ff), size: 34 }, null, 8, ["id", "name"]), f("div", { class: "g-name" }, ut(ff), -1), f("span", { class: Ge(["check", { on: gsel.value.includes(ff.id) }]) }, gsel.value.includes(ff.id) ? "✓" : "", 2)]))), 128)) : (R(), I("div", { class: "empty-text", style: { padding: "20px" } }, "没有可邀请的好友", -1))]), f("button", { class: "ai-sheet-btn primary", style: { width: "calc(100% - 28px)" }, disabled: gbusy.value || !gsel.value.length, onClick: doInvite }, V(gbusy.value ? "邀请中…" : "确认邀请"), 9, ["disabled", "onClick"]), f("button", { class: "qr-close", onClick: ev => ginvite.value = !1 }, "取消")])])) : xe("", !0), j.value ? (R(), I("div", {
+            }, null, 8, ["visible", "items"]), gpanel.value ? (R(), I("div", { key: "gp", class: "mask", onClick: Jt(ev => gpanel.value = !1, ["self"]) }, [f("div", { class: "sheet", style: { maxHeight: "84vh", overflowY: "auto" } }, [
+                    f("div", { class: "sheet-title" }, "群设置"),
+                    f("div", { class: "sheet-list" }, [
+                        f("button", { class: "sheet-item", style: { justifyContent: "space-between", padding: "0 16px" }, onClick: editGroupName }, [
+                            f("span", null, "群名称"),
+                            f("span", { style: { color: "#8b8b93", fontSize: "13px", maxWidth: "62%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } }, V(i.value.name || "未命名群聊"))
+                        ]),
+                        f("div", { class: "sheet-item", style: { justifyContent: "space-between", padding: "0 16px" }, onClick: copyGroupNo }, [
+                            f("span", null, "群号"),
+                            f("span", { style: { color: "#2e6be6", fontSize: "13px" } }, V(i.value.groupNo) + " · 复制")
+                        ]),
+                        f("div", { class: "sheet-item", style: { justifyContent: "space-between", padding: "0 16px" }, onClick: editAnnouncement }, [
+                            f("span", null, "群公告"),
+                            f("span", { style: { color: "#8b8b93", fontSize: "13px", maxWidth: "62%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } }, i.value.announcement || (canManage.value ? "点击设置" : "未设置"))
+                        ]),
+                        canManage.value ? f("button", { class: "sheet-item", style: { justifyContent: "space-between", padding: "0 16px" }, onClick: toggleJoinMode }, [
+                            f("span", null, "加群方式"),
+                            f("span", { style: { color: "#8b8b93", fontSize: "13px" } }, (i.value.joinMode || "review") === "open" ? "无需审核" : "需群主审核")
+                        ]) : xe("", !0)
+                    ]),
+                    isOwner.value ? f("div", { class: "sheet-list" }, [
+                        f("div", { class: "sheet-item", style: { justifyContent: "space-between", padding: "0 16px" }, onClick: toggleMuteAll }, [
+                            f("span", null, "全员禁言"),
+                            f("span", { class: Ge(["switch", { on: !!(i.value && i.value.muteAll) }]) })
+                        ])
+                    ]) : xe("", !0),
+                    f("div", { class: "sheet-list" }, [
+                        f("div", { class: "sheet-title" }, "群成员（" + ((i.value.members || []).length) + "）"),
+                        (R(!0), I(ye, null, He((i.value.members || []), mm => (R(), I("div", {
+                            key: mm.id,
+                            class: "sheet-item",
+                            style: { justifyContent: "flex-start", gap: "8px", padding: "0 14px" },
+                            onClick: canManage.value ? ev => openMember(mm) : undefined
+                        }, [
+                            G(Qe, { id: mm.id, name: gName(mm), size: 30 }, null, 8, ["id", "name"]),
+                            f("span", null, V(gName(mm))),
+                            mm.id === s.value ? f("span", { style: { fontSize: "11px", color: "#b0b0b8" } }, "我") : xe("", !0),
+                            isMuted(mm) ? f("span", { style: { fontSize: "10px", fontWeight: "700", color: "#c2410c", background: "#fff1e6", padding: "1px 6px", borderRadius: "5px" } }, "已禁言") : xe("", !0),
+                            mm.role === "owner" ? f("span", { style: { marginLeft: "auto", fontSize: "10px", fontWeight: "700", color: "#6b4a00", padding: "1px 6px", borderRadius: "5px", background: "linear-gradient(135deg,#ffe9a8,#f6c453)" } }, "群主") : mm.role === "admin" ? f("span", { style: { marginLeft: "auto", fontSize: "10px", fontWeight: "700", color: "#0d6b3f", padding: "1px 6px", borderRadius: "5px", background: "#e3f6ec" } }, "管理员") : f("span", { style: { marginLeft: "auto", fontSize: "10px", fontWeight: "600", color: "#6b6b74", padding: "1px 6px", borderRadius: "5px", background: "#f0f0f4" } }, "成员")
+                        ]))), 128))
+                    ]),
+                    canManage.value && greqs.value.length ? f("div", { class: "sheet-list" }, [
+                        f("div", { class: "sheet-title" }, "入群申请（" + greqs.value.length + "）"),
+                        (R(!0), I(ye, null, He(greqs.value, rr => (R(), I("div", { key: rr.id, class: "sheet-item", style: { justifyContent: "flex-start", gap: "8px", padding: "0 14px" } }, [
+                            G(Qe, { id: rr.user.id, name: ut(rr.user), size: 30 }, null, 8, ["id", "name"]),
+                            f("span", null, V(ut(rr.user))),
+                            f("button", { class: "mock-btn", style: { marginLeft: "auto", background: "var(--accent)", color: "#232300", fontWeight: "700" }, onClick: ev => approveGroupReq(rr.id, !0) }, "同意"),
+                            f("button", { class: "mock-btn", onClick: ev => approveGroupReq(rr.id, !1) }, "拒绝")
+                        ]))), 128))
+                    ]) : xe("", !0),
+                    f("div", { class: "sheet-list" }, [
+                        f("button", { class: "sheet-item", style: { justifyContent: "space-between", padding: "0 16px" }, onClick: editMyNick }, [
+                            f("span", null, "我的群名片"),
+                            f("span", { style: { color: "#8b8b93", fontSize: "13px", maxWidth: "60%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } }, gName((i.value.members || []).find(x => x.id === s.value)) || "未设置")
+                        ])
+                    ]),
+                    f("div", { class: "sheet-list" }, [
+                        isOwner.value ? f("button", { class: "sheet-item danger", onClick: dissolveGroup }, "解散群聊") : f("button", { class: "sheet-item danger", onClick: leaveGroup }, "退出群聊")
+                    ]),
+                    f("button", { class: "sheet-cancel", onClick: ev => gpanel.value = !1 }, "关闭")
+                ])])) : xe("", !0), gmem.value ? (R(), I("div", {
+                    key: "gm",
+                    class: "mask",
+                    onClick: Jt(ev => {
+                        gmem.value = null, gmute.value = !1
+                    }, ["self"])
+                }, [f("div", { class: "sheet" }, [
+                    f("div", { class: "sheet-title" }, gName(gmem.value)),
+                    gmute.value ? f("div", { class: "sheet-list" }, [
+                        f("button", { class: "sheet-item", onClick: ev => muteMember(10) }, "禁言 10 分钟"),
+                        f("button", { class: "sheet-item", onClick: ev => muteMember(60) }, "禁言 1 小时"),
+                        f("button", { class: "sheet-item", onClick: ev => muteMember(720) }, "禁言 12 小时"),
+                        f("button", { class: "sheet-item", onClick: ev => muteMember(1440) }, "禁言 1 天"),
+                        f("button", { class: "sheet-item danger", onClick: ev => muteMember(0) }, "解除禁言")
+                    ]) : f("div", { class: "sheet-list" }, [
+                        isOwner.value && gmem.value.role !== "owner" ? f("button", { class: "sheet-item", onClick: toggleAdmin }, gmem.value.role === "admin" ? "取消管理员" : "设为管理员") : xe("", !0),
+                        canManage.value && gmem.value.role !== "owner" ? f("button", { class: "sheet-item", onClick: ev => gmute.value = !0 }, isMuted(gmem.value) ? "修改禁言时长" : "禁言") : xe("", !0),
+                        canManage.value && isMuted(gmem.value) ? f("button", { class: "sheet-item", onClick: ev => muteMember(0) }, "解除禁言") : xe("", !0),
+                        isOwner.value && gmem.value.role !== "owner" ? f("button", { class: "sheet-item", onClick: transferOwner }, "转让群主") : xe("", !0),
+                        canManage.value && gmem.value.role !== "owner" && !(myRole.value === "admin" && gmem.value.role === "admin") ? f("button", { class: "sheet-item danger", onClick: kickMember }, "移出本群") : xe("", !0)
+                    ]),
+                    f("button", { class: "sheet-cancel", onClick: gmute.value ? ev => gmute.value = !1 : ev => gmem.value = null }, gmute.value ? "返回" : "取消")
+                ])])) : xe("", !0), ginvite.value ? (R(), I("div", { key: "gi", class: "mask", onClick: Jt(ev => ginvite.value = !1, ["self"]) }, [f("div", { class: "sheet" }, [f("div", { class: "sheet-title" }, "邀请好友进群", -1), f("div", { class: "group-friends", style: { margin: "0 10px 10px" } }, [inviteCandidates.value.length ? (R(!0), I(ye, null, He(inviteCandidates.value, ff => (R(), I("div", { key: ff.id, class: "group-friend", onClick: ev => toggleSel(ff.id) }, [G(Qe, { id: ff.id, name: ut(ff), size: 34 }, null, 8, ["id", "name"]), f("div", { class: "g-name" }, ut(ff), -1), f("span", { class: Ge(["check", { on: gsel.value.includes(ff.id) }]) }, gsel.value.includes(ff.id) ? "✓" : "", 2)]))), 128)) : (R(), I("div", { class: "empty-text", style: { padding: "20px" } }, "没有可邀请的好友", -1))]), f("button", { class: "ai-sheet-btn primary", style: { width: "calc(100% - 28px)" }, disabled: gbusy.value || !gsel.value.length, onClick: doInvite }, V(gbusy.value ? "邀请中…" : "确认邀请"), 9, ["disabled", "onClick"]), f("button", { class: "qr-close", onClick: ev => ginvite.value = !1 }, "取消")])])) : xe("", !0), j.value ? (R(), I("div", {
                 key: 1,
                 class: "img-viewer",
                 onClick: ee
