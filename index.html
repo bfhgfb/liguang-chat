@@ -19010,8 +19010,9 @@ const b5 = {
                 }, [f("div", am, [G(Qe, {
                     id: w.type === "group" ? "G" + w.id : (B = w.peer) == null ? void 0 : B.id,
                     name: w.type === "group" ? w.title : Z(ut)(w.peer),
+                    src: w.type === "group" ? w.avatarUrl || "" : "",
                     size: 46
-                }, null, 8, ["id", "name"]), w.unread && !w.muted ? (R(), I("span", lm, V(w.unread > 99 ? "99+" : w.unread), 1)) : xe("", !0), w.muted ? (R(), I("span", xm, [G(ge, {
+                }, null, 8, ["id", "name", "src"]), w.unread && !w.muted ? (R(), I("span", lm, V(w.unread > 99 ? "99+" : w.unread), 1)) : xe("", !0), w.muted ? (R(), I("span", xm, [G(ge, {
                     name: "mute",
                     size: 12
                 })])) : xe("", !0)]), f("div", cm, [f("div", um, [f("span", dm, V(w.title), 1), w.type === "direct" && ((y = w.peer) != null && y.is_official) ? (R(), I("span", hm, "官方")) : xe("", !0), w.type === "direct" && w.peer ? (R(), I("span", {
@@ -19217,7 +19218,9 @@ const Sm = {
                 gsel = se([]),
                 gbusy = se(!1),
                 gmem = se(null),
-                gmute = se(!1);
+                gmute = se(!1),
+                gfile = se(null),
+                gup = se(!1);
             let _ = null,
                 F = [],
                 v = null,
@@ -19627,6 +19630,28 @@ const Sm = {
                 gmem.value = mm, gmute.value = !1
             }
 
+            function pickGroupAvatar() {
+                gfile.value && gfile.value.click()
+            }
+            async function onGroupAvatar(ev) {
+                const f0 = ev.target.files && ev.target.files[0];
+                ev.target.value = "";
+                if (!f0 || !isOwner.value) return;
+                gup.value = !0;
+                try {
+                    const d = await Bo(f0, 480, .8),
+                        url = await Hs(d);
+                    await groupRpc("group_set_avatar", {
+                        p_cid: n,
+                        p_url: url
+                    }, "群头像已更新")
+                } catch (e) {
+                    te(e.message || "上传失败")
+                } finally {
+                    gup.value = !1
+                }
+            }
+
             async function groupRpc(name, params, okText) {
                 if (gbusy.value) return null;
                 gbusy.value = !0;
@@ -19912,8 +19937,16 @@ const Sm = {
                 onSelect: Se,
                 onClose: ie[4] || (ie[4] = ae => d.value = !1)
             }, null, 8, ["visible", "items"]), gpanel.value ? (R(), I("div", { key: "gp", class: "mask", onClick: Jt(ev => gpanel.value = !1, ["self"]) }, [f("div", { class: "sheet", style: { maxHeight: "84vh", overflowY: "auto" } }, [
+                    f("input", { type: "file", accept: "image/*", style: { display: "none" }, ref: gfile, onChange: onGroupAvatar }),
                     f("div", { class: "sheet-title" }, "群设置"),
                     f("div", { class: "sheet-list" }, [
+                        isOwner.value ? f("div", { class: "sheet-item", style: { justifyContent: "space-between", padding: "0 16px" }, onClick: pickGroupAvatar }, [
+                            f("span", null, "群头像"),
+                            f("span", { style: { display: "inline-flex", alignItems: "center", gap: "8px", color: "#8b8b93", fontSize: "13px" } }, [
+                                G(Qe, { id: "G" + i.value.id, name: i.value.name || "", src: i.value.avatarUrl || "", size: 34 }, null, 8, ["id", "name", "src"]),
+                                f("span", null, gup.value ? "上传中…" : "更换")
+                            ])
+                        ]) : xe("", !0),
                         f("button", { class: "sheet-item", style: { justifyContent: "space-between", padding: "0 16px" }, onClick: editGroupName }, [
                             f("span", null, "群名称"),
                             f("span", { style: { color: "#8b8b93", fontSize: "13px", maxWidth: "62%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } }, V(i.value.name || "未命名群聊"))
