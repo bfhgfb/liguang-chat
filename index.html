@@ -16518,6 +16518,7 @@ async function jp(t) {
     return await $t(), e
 }
 async function Up(t) {
+    if (ed(t)) throw new Error("小杜官方账号不能删除");
     const {
         error: e
     } = await ve.rpc("remove_friend", {
@@ -22415,7 +22416,9 @@ const bC = {
                 }
             }
             async function C() {
-                if (s.value && await ur("删除好友后，聊天记录将一并清除，确定删除？", {
+                if (!s.value) return;
+                if (s.value.is_official || ed(s.value.id)) return te("小杜官方账号不能删除"), void 0;
+                if (await ur("删除好友后，聊天记录将一并清除，确定删除？", {
                         danger: !0
                     })) try {
                     await Up(s.value.id), te("已删除好友"), r.replace("/contacts")
@@ -22476,10 +22479,11 @@ const bC = {
                 key: "blk",
                 class: "action-btn",
                 onClick: h
-            }, V(Z(Gi)(s.value.id) ? "移出黑名单" : "加入黑名单"), 1)), f("button", {
+            }, V(Z(Gi)(s.value.id) ? "移出黑名单" : "加入黑名单"), 1)), s.value.is_official ? xe("", !0) : (R(), I("button", {
+                key: "del",
                 class: "action-btn danger",
                 onClick: C
-            }, "删除好友")], 64)) : (R(), I(ye, {
+            }, "删除好友"))], 64)) : (R(), I(ye, {
                 key: 2
             }, [g[5] || (g[5] = f("div", {
                 class: "empty-text",
