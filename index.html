@@ -16698,26 +16698,58 @@ async function Hs(t) {
     return a.publicUrl
 }
 let xdPt = 0,
-    xdMenuAt = 0;
+    xdMenuAt = 0,
+    xdBlob = null;
+
+function xdImgName(t) {
+    const e = (t && t.type ? t.type.split("/")[1] : "jpg").split("+")[0];
+    return "xiaodu-" + Date.now() + "." + (e === "jpeg" ? "jpg" : e || "jpg")
+}
+
+function xdPreload(t) {
+    xdBlob = null, t && fetch(t, {
+        mode: "cors"
+    }).then(r => r.blob()).then(r => {
+        xdBlob = r
+    }).catch(() => {})
+}
 
 function xdSaveImage(t) {
     if (!t) return;
-    const e = document.createElement("a");
+    const e = /iPad|iPhone|iPod/.test(navigator.userAgent) || navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
+    const r = n => {
+        if (e && navigator.canShare) try {
+            const s = new File([n], xdImgName(n), {
+                type: n.type || "image/jpeg"
+            });
+            if (navigator.canShare({
+                    files: [s]
+                })) return navigator.share({
+                    files: [s]
+                }).then(() => te("已保存")).catch(() => {}), !0
+        } catch (i) {}
+        const s = URL.createObjectURL(n),
+            i = document.createElement("a");
+        return i.href = s, i.download = xdImgName(n), i.rel = "noopener", document.body.appendChild(i), i.click(), i.remove(), setTimeout(() => URL.revokeObjectURL(s), 5e3), te("图片已保存"), !0
+    };
+    if (xdBlob) {
+        r(xdBlob);
+        return
+    }
     fetch(t, {
         mode: "cors"
-    }).then(r => r.blob()).then(r => {
-        const n = URL.createObjectURL(r),
-            s = "xiaodu-" + Date.now() + "." + ((r.type.split("/")[1] || "jpg").split("+")[0]);
-        e.href = n, e.download = s, e.rel = "noopener", document.body.appendChild(e), e.click(), e.remove(), setTimeout(() => URL.revokeObjectURL(n), 3e3), te("图片已保存")
+    }).then(n => n.blob()).then(n => {
+        xdBlob = n, r(n)
     }).catch(() => {
-        e.href = t, e.download = "", e.target = "_blank", e.rel = "noopener", document.body.appendChild(e), e.click(), e.remove()
+        const n = window.open(t, "_blank");
+        n ? (n.focus(), te("已打开图片，长按图片选择「存储图像」")) : te("保存失败，请长按图片手动保存")
     })
 }
 
 function xdImageMenu(t) {
     if (!t) return;
     const e = document.getElementById("xd-img-menu");
-    e && e.remove(), xdMenuAt = Date.now();
+    e && e.remove(), xdMenuAt = Date.now(), xdPreload(t);
     const r = document.createElement("div");
     r.id = "xd-img-menu", r.style.cssText = "position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.42);display:flex;align-items:flex-end;", r.onclick = n => {
         Date.now() - xdMenuAt < 400 || n.target === r && r.remove()
@@ -16725,7 +16757,7 @@ function xdImageMenu(t) {
     const n = document.createElement("div");
     n.style.cssText = "width:100%;background:#fff;border-radius:18px 18px 0 0;padding:10px 12px calc(12px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:8px;";
     const s = document.createElement("button");
-    s.textContent = "保存图片", s.style.cssText = "height:50px;border:0;border-radius:12px;background:#f2f2f6;font-size:16px;font-weight:600;color:#111;", s.onclick = () => {
+    s.textContent = "保存到相册", s.style.cssText = "height:50px;border:0;border-radius:12px;background:#f2f2f6;font-size:16px;font-weight:600;color:#111;", s.onclick = () => {
         r.remove(), xdSaveImage(t)
     };
     const i = document.createElement("button");
