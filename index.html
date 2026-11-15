@@ -16697,85 +16697,6 @@ async function Hs(t) {
     } = ve.storage.from("media").getPublicUrl(i);
     return a.publicUrl
 }
-let xdPt = 0,
-    xdMenuAt = 0,
-    xdBlob = null;
-
-function xdImgName(t) {
-    const e = (t && t.type ? t.type.split("/")[1] : "jpg").split("+")[0];
-    return "xiaodu-" + Date.now() + "." + (e === "jpeg" ? "jpg" : e || "jpg")
-}
-
-function xdPreload(t) {
-    xdBlob = null, t && fetch(t, {
-        mode: "cors"
-    }).then(r => r.blob()).then(r => {
-        xdBlob = r
-    }).catch(() => {})
-}
-
-function xdSaveImage(t) {
-    if (!t) return;
-    const e = /Android|iPad|iPhone|iPod/.test(navigator.userAgent) || navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
-    const r = n => {
-        if (e && navigator.canShare) try {
-            const s = new File([n], xdImgName(n), {
-                type: n.type || "image/jpeg"
-            });
-            if (navigator.canShare({
-                    files: [s]
-                })) return navigator.share({
-                    files: [s]
-                }).then(() => te("已发送到系统面板")).catch(() => {}), !0
-        } catch (i) {}
-        const s = URL.createObjectURL(n),
-            i = document.createElement("a");
-        return i.href = s, i.download = xdImgName(n), i.rel = "noopener", document.body.appendChild(i), i.click(), i.remove(), setTimeout(() => URL.revokeObjectURL(s), 5e3), te("图片已保存到下载目录"), !0
-    };
-    if (xdBlob) {
-        r(xdBlob);
-        return
-    }
-    fetch(t, {
-        mode: "cors"
-    }).then(n => n.blob()).then(n => {
-        xdBlob = n, r(n)
-    }).catch(() => {
-        const n = window.open(t, "_blank");
-        n ? (n.focus(), te("已打开图片，长按图片选择「存储图像」")) : te("保存失败，请长按图片手动保存")
-    })
-}
-
-function xdImageMenu(t) {
-    if (!t) return;
-    const e = document.getElementById("xd-img-menu");
-    e && e.remove(), xdMenuAt = Date.now(), xdPreload(t);
-    const r = document.createElement("div");
-    r.id = "xd-img-menu", r.style.cssText = "position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.42);display:flex;align-items:flex-end;", r.onclick = n => {
-        Date.now() - xdMenuAt < 400 || n.target === r && r.remove()
-    };
-    const n = document.createElement("div");
-    n.style.cssText = "width:100%;background:#fff;border-radius:18px 18px 0 0;padding:10px 12px calc(12px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:8px;";
-    const s = document.createElement("button");
-    s.textContent = "保存到相册", s.style.cssText = "height:50px;border:0;border-radius:12px;background:#f2f2f6;font-size:16px;font-weight:600;color:#111;", s.onclick = () => {
-        r.remove(), xdSaveImage(t)
-    };
-    const i = document.createElement("button");
-    i.textContent = "打开原图（长按保存）", i.style.cssText = "height:50px;border:0;border-radius:12px;background:#f2f2f6;font-size:16px;font-weight:500;color:#111;", i.onclick = () => {
-        r.remove(), window.open(t, "_blank"), te("请长按图片选择「保存图片」")
-    };
-    const o = document.createElement("button");
-    o.textContent = "取消", o.style.cssText = "height:50px;border:0;border-radius:12px;background:#fff;font-size:16px;color:#8b8b93;", o.onclick = () => r.remove(), n.appendChild(s), n.appendChild(i), n.appendChild(o), r.appendChild(n), document.body.appendChild(r)
-}
-
-function xdPressStart(t, e) {
-    if (!e) return;
-    clearTimeout(xdPt), xdPt = setTimeout(() => xdImageMenu(e), 480)
-}
-
-function xdPressEnd() {
-    clearTimeout(xdPt)
-}
 async function Hu(t) {
     if (!b.me) throw new Error("请先登录");
     const e = {};
@@ -19551,7 +19472,7 @@ const Sm = {
             let K = 0;
 
             function ee() {
-                Date.now() - K < 250 || Date.now() - xdMenuAt < 700 || (j.value = "")
+                Date.now() - K < 250 || (j.value = "")
             }
 
             function re() {
@@ -20152,17 +20073,7 @@ const Sm = {
                 onClick: ee
             }, [f("img", {
                 src: j.value,
-                alt: "图片消息",
-                onTouchstart: L => xdPressStart(L, j.value),
-                onTouchend: xdPressEnd,
-                onTouchcancel: xdPressEnd,
-                onTouchmove: xdPressEnd,
-                onMousedown: L => xdPressStart(L, j.value),
-                onMouseup: xdPressEnd,
-                onMouseleave: xdPressEnd,
-                onContextmenu: L => {
-                    L.preventDefault(), xdImageMenu(j.value)
-                }
+                alt: "图片消息"
             }, null, 8, Gm)])) : xe("", !0)]))
         }
     },
@@ -22133,22 +22044,10 @@ const bC = {
             }, "发送", 8, Vg)])])], 64)) : xe("", !0)])), m.value ? (R(), I("div", {
                 key: 1,
                 class: "img-preview",
-                onClick: O => {
-                    Date.now() - xdMenuAt < 700 || (m.value = "")
-                }
+                onClick: T[6] || (T[6] = O => m.value = "")
             }, [f("img", {
                 src: m.value,
-                alt: "预览",
-                onTouchstart: O => xdPressStart(O, m.value),
-                onTouchend: xdPressEnd,
-                onTouchcancel: xdPressEnd,
-                onTouchmove: xdPressEnd,
-                onMousedown: O => xdPressStart(O, m.value),
-                onMouseup: xdPressEnd,
-                onMouseleave: xdPressEnd,
-                onContextmenu: O => {
-                    O.preventDefault(), xdImageMenu(m.value)
-                }
+                alt: "预览"
             }, null, 8, Hg)])) : xe("", !0)]))
         }
     },
@@ -22385,22 +22284,10 @@ const bC = {
             }, null, 544), m.value ? (R(), I("div", {
                 key: 1,
                 class: "img-preview",
-                onClick: O => {
-                    Date.now() - xdMenuAt < 700 || (m.value = "")
-                }
+                onClick: T[3] || (T[3] = O => m.value = "")
             }, [f("img", {
                 src: m.value,
-                alt: "预览",
-                onTouchstart: O => xdPressStart(O, m.value),
-                onTouchend: xdPressEnd,
-                onTouchcancel: xdPressEnd,
-                onTouchmove: xdPressEnd,
-                onMousedown: O => xdPressStart(O, m.value),
-                onMouseup: xdPressEnd,
-                onMouseleave: xdPressEnd,
-                onContextmenu: O => {
-                    O.preventDefault(), xdImageMenu(m.value)
-                }
+                alt: "预览"
             }, null, 8, ["src"])])) : xe("", !0)]))
         }
     },
