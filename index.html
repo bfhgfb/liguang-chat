@@ -19958,9 +19958,9 @@ const Sm = {
                         }, [
                             G(Qe, { id: mm.id, name: gName(mm), size: 30 }, null, 8, ["id", "name"]),
                             f("span", null, V(gName(mm))),
-                            mm.id === s.value ? f("span", { style: { fontSize: "11px", color: "#b0b0b8" } }, "我") : xe("", !0),
-                            isMuted(mm) ? f("span", { style: { fontSize: "10px", fontWeight: "700", color: "#c2410c", background: "#fff1e6", padding: "1px 6px", borderRadius: "5px" } }, "已禁言") : xe("", !0),
-                            mm.role === "owner" ? f("span", { style: { marginLeft: "auto", fontSize: "10px", fontWeight: "700", color: "#6b4a00", padding: "1px 6px", borderRadius: "5px", background: "linear-gradient(135deg,#ffe9a8,#f6c453)" } }, "群主") : mm.role === "admin" ? f("span", { style: { marginLeft: "auto", fontSize: "10px", fontWeight: "700", color: "#0d6b3f", padding: "1px 6px", borderRadius: "5px", background: "#e3f6ec" } }, "管理员") : f("span", { style: { marginLeft: "auto", fontSize: "10px", fontWeight: "600", color: "#6b6b74", padding: "1px 6px", borderRadius: "5px", background: "#f0f0f4" } }, "成员")
+                            mm.id === s.value ? f("span", { key: "me", style: { fontSize: "11px", color: "#b0b0b8" } }, "我") : xe("", !0),
+                            isMuted(mm) ? f("span", { key: "mu", style: { fontSize: "10px", fontWeight: "700", color: "#c2410c", background: "#fff1e6", padding: "1px 6px", borderRadius: "5px" } }, "已禁言") : xe("", !0),
+                            mm.role === "owner" ? f("span", { key: "o", style: { marginLeft: "auto", fontSize: "10px", fontWeight: "700", color: "#6b4a00", padding: "1px 6px", borderRadius: "5px", background: "linear-gradient(135deg,#ffe9a8,#f6c453)" } }, "群主") : mm.role === "admin" ? f("span", { key: "a", style: { marginLeft: "auto", fontSize: "10px", fontWeight: "700", color: "#0d6b3f", padding: "1px 6px", borderRadius: "5px", background: "#e3f6ec" } }, "管理员") : f("span", { key: "m", style: { marginLeft: "auto", fontSize: "10px", fontWeight: "600", color: "#6b6b74", padding: "1px 6px", borderRadius: "5px", background: "#f0f0f4" } }, "成员")
                         ]))), 128))
                     ]),
                     canManage.value && greqs.value.length ? f("div", { class: "sheet-list" }, [
