@@ -19700,20 +19700,6 @@ const Sm = {
                 }, on ? "已开启全员禁言" : "已关闭全员禁言")
             }
 
-            async function editAnnouncement() {
-                if (!canManage.value) return;
-                const v = await k6("群公告", {
-                    value: (i.value && i.value.announcement) || "",
-                    placeholder: "输入群公告，最多 1000 字",
-                    maxlength: 1000
-                });
-                if (v === null) return;
-                await groupRpc("group_set_announcement", {
-                    p_cid: n,
-                    p_text: v
-                }, "群公告已更新")
-            }
-
             async function editGroupName() {
                 if (!canManage.value) return;
                 const v = await k6("修改群名称", {
@@ -19793,7 +19779,7 @@ const Sm = {
                 back: "",
                 sub: !0
             }, {
-                right: Qr(() => [i.value && i.value.type === "group" ? (R(), I("button", {
+                right: Qr(() => [i.value && i.value.type === "group" && canManage.value ? (R(), I("button", {
                     key: "gs",
                     class: "icon-btn",
                     "aria-label": "群设置",
@@ -19809,7 +19795,7 @@ const Sm = {
                 }, [G(ge, {
                     name: "video",
                     size: 22
-                })])) : xe("", !0), f("button", {
+                })])) : xe("", !0), i.value && i.value.type === "group" ? xe("", !0) : f("button", {
                     class: "icon-btn",
                     "aria-label": "更多",
                     onClick: ie[0] || (ie[0] = ae => d.value = !0)
@@ -19833,11 +19819,14 @@ const Sm = {
                 class: Ge(["msg-row", {
                     mine: ae.fromId === s.value
                 }])
+            }, [f("span", {
+                style: { display: "inline-flex", flexShrink: 0, cursor: ae.fromId === s.value ? "default" : "pointer" },
+                onClick: ev => ae.fromId !== s.value && r.push("/profile/" + ae.fromId)
             }, [G(Qe, {
                 id: ae.fromId === s.value ? s.value : ae.fromId,
                 name: T(ae),
                 size: 36
-            }, null, 8, ["id", "name"]), f("div", Im, [i.value && i.value.type === "group" && ae.fromId !== s.value ? (R(), I("div", $m, [zt(V(T(ae)) + " ", 1), roleOf(ae.fromId) === "owner" ? (R(), I("span", { key: "o", style: { marginLeft: "5px", fontSize: "10px", fontWeight: "700", color: "#6b4a00", padding: "1px 5px", borderRadius: "5px", background: "linear-gradient(135deg,#ffe9a8,#f6c453)" } }, "群主")) : roleOf(ae.fromId) === "admin" ? (R(), I("span", { key: "a", style: { marginLeft: "5px", fontSize: "10px", fontWeight: "700", color: "#0d6b3f", padding: "1px 5px", borderRadius: "5px", background: "#e3f6ec" } }, "管理员")) : roleOf(ae.fromId) === "member" ? (R(), I("span", { key: "m", style: { marginLeft: "5px", fontSize: "10px", fontWeight: "600", color: "#6b6b74", padding: "1px 5px", borderRadius: "5px", background: "#f0f0f4" } }, "成员")) : xe("", !0)])) : xe("", !0), f("div", {
+            }, null, 8, ["id", "name"])]), f("div", Im, [i.value && i.value.type === "group" && ae.fromId !== s.value ? (R(), I("div", $m, [zt(V(T(ae)) + " ", 1), roleOf(ae.fromId) === "owner" ? (R(), I("span", { key: "o", style: { marginLeft: "5px", fontSize: "10px", fontWeight: "700", color: "#6b4a00", padding: "1px 5px", borderRadius: "5px", background: "linear-gradient(135deg,#ffe9a8,#f6c453)" } }, "群主")) : roleOf(ae.fromId) === "admin" ? (R(), I("span", { key: "a", style: { marginLeft: "5px", fontSize: "10px", fontWeight: "700", color: "#0d6b3f", padding: "1px 5px", borderRadius: "5px", background: "#e3f6ec" } }, "管理员")) : roleOf(ae.fromId) === "member" ? (R(), I("span", { key: "m", style: { marginLeft: "5px", fontSize: "10px", fontWeight: "600", color: "#6b6b74", padding: "1px 5px", borderRadius: "5px", background: "#f0f0f4" } }, "成员")) : xe("", !0)])) : xe("", !0), f("div", {
                 class: Ge(["bubble", {
                     mine: ae.fromId === s.value,
                     img: ae.type === "image" && !ae.recalled,
@@ -19932,10 +19921,6 @@ const Sm = {
                         f("div", { class: "sheet-item", style: { justifyContent: "space-between", padding: "0 16px" }, onClick: copyGroupNo }, [
                             f("span", null, "群号"),
                             f("span", { style: { color: "#2e6be6", fontSize: "13px" } }, V(i.value.groupNo) + " · 复制")
-                        ]),
-                        f("div", { class: "sheet-item", style: { justifyContent: "space-between", padding: "0 16px" }, onClick: editAnnouncement }, [
-                            f("span", null, "群公告"),
-                            f("span", { style: { color: "#8b8b93", fontSize: "13px", maxWidth: "62%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } }, i.value.announcement || (canManage.value ? "点击设置" : "未设置"))
                         ]),
                         canManage.value ? f("button", { class: "sheet-item", style: { justifyContent: "space-between", padding: "0 16px" }, onClick: toggleJoinMode }, [
                             f("span", null, "加群方式"),
@@ -22623,6 +22608,7 @@ const bC = {
                 }),
                 o = me(() => b.remarks[n.value] || ""),
                 a = se(!1);
+            xp(n.value);
             async function l() {
                 if (!s.value) return;
                 const m = await k6("设置备注", {
@@ -22685,6 +22671,18 @@ const bC = {
                     await Up(s.value.id), te("已删除好友"), r.replace("/contacts")
                 } catch (m) {
                     te(m.message || "删除失败")
+                }
+            }
+            const sending = se(!1);
+            async function sendReq() {
+                if (!s.value || sending.value) return;
+                sending.value = !0;
+                try {
+                    await Mp(s.value.id), te("好友申请已发送，等待对方同意")
+                } catch (m) {
+                    te(m.message || "发送失败")
+                } finally {
+                    sending.value = !1
                 }
             }
             return (m, g) => (R(), I("div", Ev, [G(_t, {
@@ -22754,10 +22752,11 @@ const bC = {
                     color: "#8b8b93",
                     padding: "4px 18px 8px"
                 }
-            }, " 你们还不是好友，添加后可开始聊天 ", -1)), f("button", {
+            }, " 你们还不是好友，发送好友申请，对方同意后就能聊天 ", -1)), f("button", {
                 class: "action-btn primary",
-                onClick: g[1] || (g[1] = _ => m.$router.push("/add-friend"))
-            }, "添加好友")], 64)), c.value ? (R(), I("button", {
+                disabled: sending.value,
+                onClick: sendReq
+            }, V(sending.value ? "发送中…" : "加为好友"), 9, ["disabled"])], 64)), c.value ? (R(), I("button", {
                 key: 3,
                 class: "action-btn danger",
                 disabled: x.value,
