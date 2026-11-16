@@ -36259,27 +36259,110 @@ Nf(T5).use(dd).mount("#app");
 </script>
 <script>
 /* ===== 底部导航「商店」 =====
-   店铺网页设置了防嵌入（JS 验证 + cookie），iframe 里会白屏，
-   所以点击后直接在浏览器/当前窗口打开店铺，按返回键即回到小杜。 */
+   点击底部「商店」→ 在导航栏上方铺一层页面，里面嵌入店铺网页，
+   底部导航始终可见，点「我」等其它标签自动收起。
+   店铺若因安全验证加载不出来，右上角可改用浏览器打开。 */
 (function () {
   var STORE = "https://bbsjh88.ccccocccc.cc/";
   var ICON = '<path d="M6 7h12l1.2 12.2a1.8 1.8 0 0 1-1.8 2H6.6a1.8 1.8 0 0 1-1.8-2L6 7Z"/><path d="M9 9V6.5a3 3 0 0 1 6 0V9"/>';
+  var panel = null;
 
-  function openStore(ev) {
-    try {
-      ev.preventDefault();
-      ev.stopPropagation();
-    } catch (e) {}
+  function openExternal(ev) {
+    if (ev) { ev.preventDefault(); ev.stopPropagation(); }
     var w = null;
     try { w = window.open(STORE, "_blank"); } catch (e) {}
     if (!w) location.href = STORE;
   }
 
+  function buildPanel() {
+    var nav = document.querySelector("nav.tabbar");
+    var h = nav ? Math.round(nav.getBoundingClientRect().height) : 60;
+
+    panel = document.createElement("div");
+    panel.setAttribute("data-lg-store-panel", "1");
+    panel.style.cssText = "position:fixed;left:0;right:0;top:0;bottom:" + h + "px;z-index:60;" +
+      "background:#fff;display:none;flex-direction:column;-webkit-overflow-scrolling:touch";
+
+    var top = document.createElement("div");
+    top.style.cssText = "flex:none;display:flex;align-items:center;gap:8px;padding:10px 12px;" +
+      "background:#f7f7fa;border-bottom:1px solid #e5e5ea";
+    top.innerHTML =
+      '<button data-act="close" style="border:0;background:none;font-size:15px;color:#0a84ff;padding:4px 2px">‹ 返回</button>' +
+      '<span style="flex:1;text-align:center;font-size:15px;font-weight:600">商店</span>' +
+      '<button data-act="ext" style="border:0;background:none;font-size:13px;color:#0a84ff;padding:4px 2px">浏览器打开</button>';
+
+    var box = document.createElement("div");
+    box.style.cssText = "position:relative;flex:1;overflow:hidden";
+
+    var frame = document.createElement("iframe");
+    frame.src = STORE;
+    frame.setAttribute("allow", "clipboard-write");
+    frame.style.cssText = "position:absolute;inset:0;width:100%;height:100%;border:0;background:#fff";
+
+    var loading = document.createElement("div");
+    loading.style.cssText = "position:absolute;inset:0;display:flex;align-items:center;justify-content:center;" +
+      "background:#fff;color:#8e8e93;font-size:14px";
+    loading.textContent = "正在加载店铺…";
+
+    frame.addEventListener("load", function () {
+      setTimeout(function () { loading.style.display = "none"; }, 400);
+    });
+
+    box.appendChild(frame);
+    box.appendChild(loading);
+    panel.appendChild(top);
+    panel.appendChild(box);
+
+    top.addEventListener("click", function (e) {
+      var b = e.target.closest ? e.target.closest("button") : null;
+      if (!b) return;
+      if (b.getAttribute("data-act") === "close") closePanel();
+      else openExternal(e);
+    });
+
+    document.body.appendChild(panel);
+  }
+
+  var saved = [];
+  function markTabActive() {
+    saved = [];
+    var items = document.querySelectorAll("nav.tabbar button.tab");
+    for (var i = 0; i < items.length; i++) {
+      if (items[i].classList.contains("active")) saved.push(items[i]);
+      items[i].classList.remove("active");
+    }
+    var mine = document.querySelector("[data-lg-store]");
+    if (mine) mine.classList.add("active");
+  }
+
+  function openPanel() {
+    if (!panel) buildPanel();
+    panel.style.display = "flex";
+    markTabActive();
+  }
+
+  function closePanel() {
+    if (panel) panel.style.display = "none";
+    var items = document.querySelectorAll("nav.tabbar button.tab");
+    for (var i = 0; i < items.length; i++) items[i].classList.remove("active");
+    for (var j = 0; j < saved.length; j++) {
+      if (saved[j].parentNode) saved[j].classList.add("active");
+    }
+    saved = [];
+  }
+
+  function onStoreClick(ev) {
+    ev.preventDefault();
+    ev.stopPropagation();
+    if (panel && panel.style.display === "flex") closePanel();
+    else openPanel();
+  }
+
   function inject() {
     var nav = document.querySelector("nav.tabbar");
-    if (!nav || nav.querySelector("[data-lg-store]")) return false;
+    if (!nav || nav.querySelector("[data-lg-store]")) return;
     var tabs = nav.querySelectorAll("button.tab");
-    if (tabs.length < 2) return false;
+    if (tabs.length < 2) return;
 
     var src = tabs[tabs.length - 1];
     var btn = src.cloneNode(true);
@@ -36300,20 +36383,24 @@ Nf(T5).use(dd).mount("#app");
 
     var label = btn.querySelector("span");
     if (label) label.textContent = "商店";
-    else btn.appendChild(document.createTextNode("商店"));
 
     var badge = btn.querySelector(".tab-badge");
     if (badge) badge.remove();
 
-    btn.addEventListener("click", openStore, true);
+    btn.addEventListener("click", onStoreClick, true);
     nav.insertBefore(btn, src);
-    return true;
   }
 
   var timer = 0;
   function schedule() {
     clearTimeout(timer);
-    timer = setTimeout(inject, 120);
+    timer = setTimeout(function () {
+      inject();
+      if (panel && panel.parentNode && panel.style.display === "flex") {
+        var nav = document.querySelector("nav.tabbar");
+        if (nav) panel.style.bottom = Math.round(nav.getBoundingClientRect().height) + "px";
+      }
+    }, 120);
   }
 
   function boot() {
@@ -36321,7 +36408,8 @@ Nf(T5).use(dd).mount("#app");
     try {
       new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true });
     } catch (e) {}
-    window.addEventListener("hashchange", schedule);
+    window.addEventListener("hashchange", closePanel);
+    window.addEventListener("popstate", closePanel);
   }
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
