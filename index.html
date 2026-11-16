@@ -36257,5 +36257,76 @@ Nf(T5).use(dd).mount("#app");
   })();
 })();
 </script>
+<script>
+/* ===== 底部导航「商店」 =====
+   店铺网页设置了防嵌入（JS 验证 + cookie），iframe 里会白屏，
+   所以点击后直接在浏览器/当前窗口打开店铺，按返回键即回到小杜。 */
+(function () {
+  var STORE = "https://bbsjh88.ccccocccc.cc/";
+  var ICON = '<path d="M6 7h12l1.2 12.2a1.8 1.8 0 0 1-1.8 2H6.6a1.8 1.8 0 0 1-1.8-2L6 7Z"/><path d="M9 9V6.5a3 3 0 0 1 6 0V9"/>';
+
+  function openStore(ev) {
+    try {
+      ev.preventDefault();
+      ev.stopPropagation();
+    } catch (e) {}
+    var w = null;
+    try { w = window.open(STORE, "_blank"); } catch (e) {}
+    if (!w) location.href = STORE;
+  }
+
+  function inject() {
+    var nav = document.querySelector("nav.tabbar");
+    if (!nav || nav.querySelector("[data-lg-store]")) return false;
+    var tabs = nav.querySelectorAll("button.tab");
+    if (tabs.length < 2) return false;
+
+    var src = tabs[tabs.length - 1];
+    var btn = src.cloneNode(true);
+    btn.setAttribute("data-lg-store", "1");
+    btn.classList.remove("active");
+    btn.removeAttribute("aria-current");
+
+    var svg = btn.querySelector("svg");
+    if (svg) {
+      svg.setAttribute("viewBox", "0 0 24 24");
+      svg.setAttribute("fill", "none");
+      svg.setAttribute("stroke", "currentColor");
+      svg.setAttribute("stroke-width", "1.8");
+      svg.setAttribute("stroke-linecap", "round");
+      svg.setAttribute("stroke-linejoin", "round");
+      svg.innerHTML = ICON;
+    }
+
+    var label = btn.querySelector("span");
+    if (label) label.textContent = "商店";
+    else btn.appendChild(document.createTextNode("商店"));
+
+    var badge = btn.querySelector(".tab-badge");
+    if (badge) badge.remove();
+
+    btn.addEventListener("click", openStore, true);
+    nav.insertBefore(btn, src);
+    return true;
+  }
+
+  var timer = 0;
+  function schedule() {
+    clearTimeout(timer);
+    timer = setTimeout(inject, 120);
+  }
+
+  function boot() {
+    inject();
+    try {
+      new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true });
+    } catch (e) {}
+    window.addEventListener("hashchange", schedule);
+  }
+
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
+  else boot();
+})();
+</script>
 </body>
 </html>
