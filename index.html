@@ -33720,7 +33720,7 @@ const wx = Xv(Zv),
                 }
             }
             async function renameGroup(B) {
-                const y = window.prompt("新的群名称", B.name || "");
+                const y = window.__lgPrompt ? await window.__lgPrompt("修改群名称", B.name || "") : window.prompt("新的群名称", B.name || "");
                 if (y == null) return;
                 const k = y.trim();
                 if (!k) return te("群名不能为空");
@@ -34533,7 +34533,7 @@ const wx = Xv(Zv),
             }
 
             async function Te() {
-                const ok = window.__lgConfirm ? await window.__lgConfirm("确定清空所有 AI 对话吗？") : window.confirm("确定清空所有 AI 对话吗？");
+                const ok = await ur("确定清空所有 AI 对话吗？");
                 if (!ok) return;
                 i.value = [];
                 try {
@@ -35676,43 +35676,56 @@ Nf(T5).use(dd).mount("#app");
     }
   }
 
-  /* ---------- 应用内确认框（替代系统弹窗） ---------- */
-  (function confirmBox() {
+  /* ---------- 应用内输入框（替代系统弹窗） ---------- */
+  (function promptBox() {
     var style = document.createElement('style');
     style.textContent =
-      '#lgcf{position:fixed;inset:0;z-index:900;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;padding:24px}' +
-      '.lgcf-card{width:100%;max-width:320px;background:#fff;border-radius:18px;padding:22px 18px 14px;text-align:center;box-shadow:0 12px 40px rgba(0,0,0,.2)}' +
-      '.lgcf-msg{font-size:15px;color:#1b1b1f;line-height:1.65;margin-bottom:18px;white-space:pre-wrap;word-break:break-word}' +
-      '.lgcf-row{display:flex;gap:10px}' +
-      '.lgcf-cancel,.lgcf-ok{flex:1;height:42px;border:0;border-radius:12px;font-size:14.5px;font-weight:700}' +
-      '.lgcf-cancel{background:#f2f2f5;color:#55555f}' +
-      '.lgcf-ok{background:#ffd400;color:#1b1b1f}';
+      '#lgpf{position:fixed;inset:0;z-index:900;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;padding:24px}' +
+      '.lgpf-card{width:100%;max-width:320px;background:#fff;border-radius:18px;padding:20px 18px 14px;box-shadow:0 12px 40px rgba(0,0,0,.2)}' +
+      '.lgpf-title{font-size:16px;font-weight:700;color:#1b1b1f;text-align:center;margin-bottom:14px}' +
+      '.lgpf-input{width:100%;box-sizing:border-box;height:44px;border:0;border-radius:12px;background:#f4f4f7;padding:0 14px;font-size:15px;color:#1b1b1f;outline:none}' +
+      '.lgpf-row{display:flex;gap:10px;margin-top:14px}' +
+      '.lgpf-cancel,.lgpf-ok{flex:1;height:42px;border:0;border-radius:12px;font-size:14.5px;font-weight:700}' +
+      '.lgpf-cancel{background:#f2f2f5;color:#55555f}' +
+      '.lgpf-ok{background:#ffd400;color:#1b1b1f}';
     document.head.appendChild(style);
-    window.__lgConfirm = function (msg) {
+    window.__lgPrompt = function (title, value) {
       return new Promise(function (resolve) {
         var mask = document.createElement('div');
-        mask.id = 'lgcf';
+        mask.id = 'lgpf';
         var card = document.createElement('div');
-        card.className = 'lgcf-card';
-        var m = document.createElement('div');
-        m.className = 'lgcf-msg';
-        m.textContent = String(msg || '');
+        card.className = 'lgpf-card';
+        var t = document.createElement('div');
+        t.className = 'lgpf-title';
+        t.textContent = String(title || '');
+        var inp = document.createElement('input');
+        inp.className = 'lgpf-input';
+        inp.type = 'text';
+        inp.value = String(value == null ? '' : value);
         var row = document.createElement('div');
-        row.className = 'lgcf-row';
+        row.className = 'lgpf-row';
         var cancel = document.createElement('button');
-        cancel.className = 'lgcf-cancel';
+        cancel.className = 'lgpf-cancel';
         cancel.textContent = '取消';
         var ok = document.createElement('button');
-        ok.className = 'lgcf-ok';
+        ok.className = 'lgpf-ok';
         ok.textContent = '确定';
         row.appendChild(cancel); row.appendChild(ok);
-        card.appendChild(m); card.appendChild(row);
+        card.appendChild(t); card.appendChild(inp); card.appendChild(row);
         mask.appendChild(card);
-        function done(v) { try { mask.remove(); } catch (e) {} resolve(v); }
-        cancel.onclick = function () { done(false); };
-        ok.onclick = function () { done(true); };
-        mask.addEventListener('click', function (e) { if (e.target === mask) done(false); });
+        var closed = false;
+        function done(v) {
+          if (closed) return;
+          closed = true;
+          try { mask.remove(); } catch (e) {}
+          resolve(v);
+        }
+        cancel.onclick = function () { done(null); };
+        ok.onclick = function () { done(inp.value); };
+        mask.addEventListener('click', function (e) { if (e.target === mask) done(null); });
+        inp.addEventListener('keydown', function (e) { if (e.key === 'Enter') done(inp.value); });
         document.body.appendChild(mask);
+        setTimeout(function () { try { inp.focus(); inp.select(); } catch (e) {} }, 60);
       });
     };
   })();
