@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#f2f2f6">
+<title>小杜 · 网络诊断</title>
+<style>
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{margin:0;padding:18px 16px 40px;background:#f2f2f6;color:#1c1c1e;
+       font:15px/1.6 -apple-system,BlinkMacSystemFont,"PingFang SC","Helvetica Neue",sans-serif}
+  h1{font-size:20px;margin:0 0 4px}
+  .sub{color:#8e8e93;font-size:13px;margin:0 0 16px}
+  .card{background:#fff;border-radius:14px;padding:14px 16px;margin-bottom:12px;
+        box-shadow:0 1px 2px rgba(0,0,0,.04)}
+  .row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 0}
+  .name{font-size:15px}
+  .name small{display:block;color:#8e8e93;font-size:12px;font-weight:400}
+  .val{font-size:14px;font-weight:600;color:#8e8e93;text-align:right;flex:none}
+  .ok{color:#0a8f3c}
+  .bad{color:#ff3b30}
+  .concl{background:#fff;border-radius:14px;padding:14px 16px;margin:14px 0 12px;
+         font-size:14px;line-height:1.7;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+  .concl b{font-weight:600}
+  button{width:100%;padding:14px;border:0;border-radius:12px;font-size:16px;font-weight:600;margin-bottom:10px}
+  #again{background:#0a84ff;color:#fff}
+  #copy{background:#e9e9ee;color:#1c1c1e}
+  button:active{opacity:.75}
+  pre{background:#1c1c1e;color:#e5e5ea;padding:12px;border-radius:12px;
+      font:12px/1.55 ui-monospace,Menlo,monospace;white-space:pre-wrap;word-break:break-all;margin:0}
+  .hint{color:#8e8e93;font-size:12px;margin:6px 0 0}
+</style>
+</head>
+<body>
+<h1>小杜 · 网络诊断</h1>
+<p class="sub">只做检测，不会登录、不会改任何东西。测完截图发给我就行。</p>
+
+<div class="card">
+  <div class="row">
+    <div class="name">直连 Supabase<small>supabase.co</small></div>
+    <div class="val" id="v-direct">检测中…</div>
+  </div>
+  <div class="row">
+    <div class="name">Cloudflare 反代<small>workers.dev</small></div>
+    <div class="val" id="v-proxy">检测中…</div>
+  </div>
+</div>
+
+<div class="concl" id="concl">正在检测，请稍等…</div>
+
+<button id="again">重新检测</button>
+<button id="copy">复制结果</button>
+
+<div class="card">
+  <div class="row"><div class="name">App 当前用的线路</div><div class="val" id="v-ep">—</div></div>
+  <div class="row"><div class="name">手机联网状态</div><div class="val" id="v-online">—</div></div>
+  <div class="row"><div class="name">本机时间</div><div class="val" id="v-time">—</div></div>
+  <div class="row"><div class="name">浏览器</div><div class="val" id="v-ua" style="max-width:58%;font-weight:400;font-size:12px">—</div></div>
+</div>
+
+<pre id="out" hidden></pre>
+<p class="hint">如果两条都不通：先把手机时间设成「自动」，关掉 VPN / 广告拦截 / 加速器，然后换 Wi-Fi 或流量再点一次「重新检测」。</p>
+
+<script>
+(function () {
+  var DIRECT = 'https://dxibubacwhdsibiggqgg.supabase.co';
+  var PROXY = 'https://supa-proxy.2135187763.workers.dev';
+  var last = null;
+
+  function probe(base) {
+    return new Promise(function (resolve) {
+      var t0 = Date.now(), done = false;
+      var ctrl = window.AbortController ? new AbortController() : null;
+      var timer = setTimeout(function () {
+        if (done) return;
+        done = true;
+        try { ctrl && ctrl.abort(); } catch (e) {}
+        resolve({ ok: false, why: '超时', ms: Date.now() - t0 });
+      }, 4000);
+      fetch(base + '/auth/v1/health?_=' + Date.now(), {
+        cache: 'no-store',
+        signal: ctrl ? ctrl.signal : undefined
+      }).then(function (r) {
+        if (done) return;
+        done = true;
+        clearTimeout(timer);
+        resolve({ ok: r.status > 0, why: 'HTTP ' + r.status, ms: Date.now() - t0 });
+      }).catch(function (e) {
+        if (done) return;
+        done = true;
+        clearTimeout(timer);
+        resolve({ ok: false, why: '被拦截 / DNS 失败', ms: Date.now() - t0 });
+      });
+    });
+  }
+
+  function paint(id, r) {
+    var el = document.getElementById(id);
+    el.className = 'val ' + (r.ok ? 'ok' : 'bad');
+    el.textContent = (r.ok ? '通 ' + r.ms + 'ms' : '不通 ' + r.why);
+  }
+
+  function epText() {
+    var ep = null;
+    try { ep = localStorage.getItem('lg_ep'); } catch (e) {}
+    if (ep === 'proxy') return '反代';
+    if (ep === 'direct') return '直连';
+    return '还没选过（默认直连）';
+  }
+
+  function conclusion(d, p) {
+    if (d.ok && p.ok) {
+      return '<b>两条线路都通。</b>如果 App 还是登录不上，多半是手机时间不准，或装了广告拦截/加速器；把它们关掉再试。';
+    }
+    if (d.ok && !p.ok) {
+      return '<b>直连正常，反代不通。</b>App 会自动用直连，应该能正常登录。如果不行，把本页截图发我。';
+    }
+    if (!d.ok && p.ok) {
+      return '<b>直连被挡，反代能通。</b>这是典型的运营商拦截，App 会自动切到反代，属于正常可用状态。';
+    }
+    return '<b>两条线路都不通。</b>说明你这条网络把两个域名都挡了：① 手机时间设为自动 ② 关掉 VPN / 广告拦截 / 加速器 ③ 换 Wi-Fi 或流量再测。还不行就把截图发我。';
+  }
+
+  function run() {
+    document.getElementById('v-direct').className = 'val';
+    document.getElementById('v-proxy').className = 'val';
+    document.getElementById('v-direct').textContent = '检测中…';
+    document.getElementById('v-proxy').textContent = '检测中…';
+    document.getElementById('concl').textContent = '正在检测，请稍等…';
+    document.getElementById('out').hidden = true;
+
+    Promise.all([probe(DIRECT), probe(PROXY)]).then(function (r) {
+      last = { direct: r[0], proxy: r[1], at: new Date() };
+      paint('v-direct', r[0]);
+      paint('v-proxy', r[1]);
+      document.getElementById('concl').innerHTML = conclusion(r[0], r[1]);
+    });
+  }
+
+  document.getElementById('v-ep').textContent = epText();
+  document.getElementById('v-online').textContent = navigator.onLine ? '有网络' : '没联网';
+  document.getElementById('v-time').textContent = new Date().toLocaleString('zh-CN');
+  document.getElementById('v-ua').textContent = navigator.userAgent.replace(/^Mozilla\/5\.0\s*/, '').slice(0, 90);
+
+  document.getElementById('again').onclick = run;
+  document.getElementById('copy').onclick = function () {
+    if (!last) return;
+    var txt = '小杜网络诊断 ' + last.at.toLocaleString('zh-CN') + '\n' +
+      '直连: ' + (last.direct.ok ? '通 ' + last.direct.ms + 'ms' : '不通 ' + last.direct.why) + '\n' +
+      '反代: ' + (last.proxy.ok ? '通 ' + last.proxy.ms + 'ms' : '不通 ' + last.proxy.why) + '\n' +
+      '当前线路: ' + epText() + '\n' +
+      '联网: ' + (navigator.onLine ? '有' : '无') + ' · 时间: ' + new Date().toLocaleString('zh-CN') + '\n' +
+      'UA: ' + navigator.userAgent;
+    var pre = document.getElementById('out');
+    pre.hidden = false;
+    pre.textContent = txt;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(txt).catch(function () {});
+    }
+  };
+
+  run();
+})();
+</script>
+</body>
+</html>
