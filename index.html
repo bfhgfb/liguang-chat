@@ -74,6 +74,12 @@
     };
   </script>
   <script>
+    /* 视频通话：声网 Agora（App ID 鉴权模式，不使用 Token）
+       跨运营商 / 一方用流量的情况下也能打通；组件在通话时才按需加载。 */
+    window.__AGORA_APP_ID__ = "7bec2e5a65b5473aaed7b65abb773cc0";
+    window.__AGORA_SRC__ = "./agora.js";
+  </script>
+  <script>
     /* 通话中切到后台再回到前台：修复“声音还在、画面卡住”
        1) 记录所有 RTCPeerConnection；
        2) 回到前台时，连接断开的调用 restartIce() 重连；
@@ -17750,6 +17756,7 @@ const Mt = (t, e) => {
 let ke = null,
     tt = null,
     Ds = null,
+    lgInMedia = null,
     Ji = !1,
     vo = !1,
     Er = null,
@@ -17858,10 +17865,60 @@ function rd(t) {
     }
     if (t.call_id !== W.callId) return;
     const e = t.payload || {};
+    if (lgCallMedia === "agora" && t.kind === "need-offer") {
+        lgAgReset();
+        (async function lgLazy() {
+            try {
+                ke = await id(tt);
+                const lgO = await ke.createOffer();
+                await ke.setLocalDescription(lgO), await nt(W.callId, W.peerId, "offer", {
+                    sdp: ke.localDescription
+                })
+            } catch (lgE) {
+                pn("通话连接失败，请重试")
+            }
+        })();
+        return
+    }
+    if (lgCallMedia === "agora" && (t.kind === "answer" || t.kind === "offer" || t.kind === "candidate" || t.kind === "need-offer" || t.kind === "need-answer")) return;
     switch (t.kind) {
-        case "accept":
-            vo = !0, Xi.length && od(Xi.splice(0)), e5();
-            break;
+        case "accept": {
+            vo = !0, Xi.length && od(Xi.splice(0));
+            const lgSA = e.media === "agora" || lgCallMedia === "agora" && e.media !== "webrtc";
+            if (lgSA) {
+                lgCallMedia = "agora";
+                if (ke) {
+                    try {
+                        ke.__lgStats && clearInterval(ke.__lgStats), ke.close()
+                    } catch (lgE) {}
+                    ke = null
+                }
+                Xi.length = 0, Yi.length = 0, W.phase = "connecting", W.hint = "正在连接…", clearTimeout(gn);
+                lgAgStart().then(lgAgAttach).catch(function (lgE) {
+                    pn(lgAgErrMsg(lgE))
+                });
+                gn = setTimeout(function () {
+                    W.phase !== "active" && pn("连接超时：两边网络不稳定，换个网络再试")
+                }, 2e4)
+            } else if (ke) e5();
+            else {
+                lgCallMedia = "webrtc",
+                function () {
+                    (async function () {
+                        try {
+                            ke = await id(tt);
+                            const lgO = await ke.createOffer();
+                            await ke.setLocalDescription(lgO), await nt(W.callId, W.peerId, "offer", {
+                                sdp: ke.localDescription
+                            })
+                        } catch (lgE) {
+                            pn("通话连接失败，请重试")
+                        }
+                    })()
+                }(), e5()
+            }
+            break
+        }
         case "answer":
             r5(e);
             break;
@@ -18060,6 +18117,162 @@ function setupAdaptiveLg(pc, stream) {
         } catch (e) {}
     }, 2e3)
 }
+/* ===== 声网 Agora 视频通话（App ID 模式，无 Token） ===== */
+let lgAg = null,
+    lgAgLoad = null,
+    lgCallMedia = "webrtc";
+
+function lgAgoraAppId() {
+    return String(window.__AGORA_APP_ID__ || "")
+}
+
+function lgLoadAgora() {
+    if (window.AgoraRTC) return Promise.resolve(window.AgoraRTC);
+    if (lgAgLoad) return lgAgLoad;
+    lgAgLoad = new Promise(function (resolve, reject) {
+        var s = document.createElement("script"),
+            done = !1,
+            timer = setTimeout(function () {
+                done || (done = !0, reject(new Error("通话组件加载超时")))
+            }, 15000);
+        s.src = window.__AGORA_SRC__ || "./agora.js";
+        s.async = !0;
+        s.onload = function () {
+            done || (done = !0, clearTimeout(timer), window.AgoraRTC ? resolve(window.AgoraRTC) : reject(new Error("通话组件异常")))
+        };
+        s.onerror = function () {
+            done || (done = !0, clearTimeout(timer), reject(new Error("通话组件加载失败")))
+        };
+        document.head.appendChild(s)
+    });
+    return lgAgLoad
+}
+
+function lgAgErrMsg(t) {
+    var e = String(t && (t.message || t.code || t.reason) || "");
+    return /token/i.test(e) || /CAN_NOT_GET_GATEWAY_SERVER|INVALID_TOKEN/i.test(e) ? "声网要求 Token：请在 console.agora.io 把项目鉴权方式改成「App ID」后再试" : "通话连接失败：" + (e || "网络问题")
+}
+
+function lgUidOf(t) {
+    var e = "u" + (t || ""),
+        r = 5381;
+    for (var n = 0; n < e.length; n++) r = (r * 33 ^ e.charCodeAt(n)) >>> 0;
+    return r % 2e9 + 1
+}
+
+function lgAgState() {
+    return lgAg || (lgAg = {
+        client: null,
+        mic: null,
+        cam: null,
+        joined: !1,
+        uid: 0,
+        remoteUid: null
+    }), lgAg
+}
+
+function lgAgReset() {
+    var t = lgAg;
+    lgAg = null, lgCallMedia = "webrtc";
+    if (!t) return;
+    /* 不调用 cam/mic 的 stop()：它们包装的是通话共用的摄像头/麦克风轨道，
+       停掉会导致退回 WebRTC 时没有画面和声音。leave() 已经会取消发布。 */
+    try {
+        t.client && t.joined && t.client.leave()
+    } catch (e) {}
+    var r = document.querySelector(".lg-agora-remote");
+    r && r.parentNode && r.parentNode.removeChild(r)
+}
+
+function lgAgAttach() {
+    var t = lgAg;
+    if (!t || !t.client) return;
+    var e = t.client.remoteUsers || [],
+        r = null;
+    for (var n = 0; n < e.length; n++)
+        if (e[n].hasVideo || e[n].hasAudio) {
+            r = e[n];
+            break
+        }
+    if (!r) return;
+    t.remoteUid = r.uid;
+    var s = new MediaStream(),
+        i = !1;
+    try {
+        var v = r.videoTrack,
+            a = r.audioTrack,
+            vm = v && (v.getMediaStreamTrack ? v.getMediaStreamTrack() : v.mediaStreamTrack),
+            am = a && (a.getMediaStreamTrack ? a.getMediaStreamTrack() : a.mediaStreamTrack);
+        vm && (s.addTrack(vm), i = !0), am && (s.addTrack(am), i = !0)
+    } catch (x) {}
+    if (i) W.remoteStream = Gs(s);
+    else {
+        var box = document.querySelector(".lg-agora-remote");
+        if (!box) {
+            box = document.createElement("div"), box.className = "lg-agora-remote", box.style.cssText = "position:absolute;inset:0;overflow:hidden;background:#000;z-index:0;pointer-events:none";
+            var mask = document.querySelector(".call-mask .live") || document.querySelector(".call-mask");
+            mask && mask.insertBefore(box, mask.firstChild)
+        }
+        if (r.videoTrack && !r.videoTrack.__lgPlayed) try {
+            r.videoTrack.play(box), r.videoTrack.__lgPlayed = !0
+        } catch (x) {}
+        if (r.audioTrack && !r.audioTrack.__lgPlayed) try {
+            r.audioTrack.play(), r.audioTrack.__lgPlayed = !0
+        } catch (x) {}
+        W.remoteStream || (W.remoteStream = Gs(new MediaStream()))
+    }
+    Z6()
+}
+
+async function lgAgPublish() {
+    var t = lgAgState();
+    if (!t.client || !t.joined || !tt) return;
+    var AgoraRTC = window.AgoraRTC,
+        n = [];
+    try {
+        var e = tt.getVideoTracks()[0],
+            r = tt.getAudioTracks()[0];
+        !t.cam && e && (t.cam = AgoraRTC.createCustomVideoTrack({
+            mediaStreamTrack: e
+        }), n.push(t.cam)), !t.mic && r && (t.mic = AgoraRTC.createCustomAudioTrack({
+            mediaStreamTrack: r
+        }), n.push(t.mic)), n.length && await t.client.publish(n)
+    } catch (x) {}
+}
+
+async function lgAgStart() {
+    var AgoraRTC = await lgLoadAgora(),
+        t = lgAgState();
+    t.client || (t.client = AgoraRTC.createClient({
+        mode: "rtc",
+        codec: "vp8"
+    }), t.client.on("user-published", async function (e, r) {
+        try {
+            await t.client.subscribe(e, r)
+        } catch (x) {}
+        lgAgAttach()
+    }), t.client.on("user-left", function () {
+        W.phase !== "idle" && pn("对方已挂断")
+    }), t.client.on("connection-state-change", function (e) {
+        e === "CONNECTED" && lgAgAttach()
+    }));
+    t.uid || (t.uid = lgUidOf(b.me && b.me.id));
+    t.joined || (await t.client.join(lgAgoraAppId(), W.callId, null, t.uid), t.joined = !0);
+    await lgAgPublish(), lgAgAttach()
+}
+
+async function lgAgFlip(t) {
+    if (!lgAg || !lgAg.joined || !lgAg.client) return !1;
+    var AgoraRTC = window.AgoraRTC;
+    try {
+        return lgAg.cam && (await lgAg.client.unpublish(lgAg.cam), lgAg.cam.stop(), lgAg.cam = null), lgAg.cam = AgoraRTC.createCustomVideoTrack({
+            mediaStreamTrack: t
+        }), await lgAg.client.publish(lgAg.cam), !0
+    } catch (e) {
+        return !1
+    }
+}
+
 async function id(t, bare) {
     const lgIceServers = await getIceServersLg();
     const e = new RTCPeerConnection({
@@ -18216,6 +18429,7 @@ function ld() {
 
 function Wt(t) {
     const e = W.callId;
+    lgAgReset();
     if (ld(), clearTimeout(Er), clearTimeout(gn), clearTimeout(Pr), clearTimeout(an), clearInterval(or), clearTimeout(Fs), Er = null, gn = null, Pr = null, an = null, or = null, Fs = null, Fi = 0, ke) {
         ke.__lgStats && clearInterval(ke.__lgStats);
         try {
@@ -18241,31 +18455,41 @@ async function i5(t) {
         return Wt(""), te(nd(n)), !1
     }
     W.localStream = Gs(tt);
-    let lgFail = null;
+    let lgUseAg = !1;
     try {
-        ke = await id(tt);
-        const n = await ke.createOffer();
-        await ke.setLocalDescription(n)
-    } catch (n) {
-        lgFail = n
+        await lgLoadAgora(), lgUseAg = !0
+    } catch (lgE) {
+        lgUseAg = !1
     }
-    if (lgFail) {
+    lgCallMedia = lgUseAg ? "agora" : "webrtc";
+    let lgFail = null;
+    if (!lgUseAg) {
         try {
-            ke && ke.close()
-        } catch (n) {}
-        ke = null;
-        try {
-            ke = await id(tt, !0);
+            ke = await id(tt);
             const n = await ke.createOffer();
             await ke.setLocalDescription(n)
         } catch (n) {
-            return Wt(""), te("通话启动失败" + (n && n.name ? "（" + n.name + "）" : "") + "，请重试"), !1
+            lgFail = n
+        }
+        if (lgFail) {
+            try {
+                ke && ke.close()
+            } catch (n) {}
+            ke = null;
+            try {
+                ke = await id(tt, !0);
+                const n = await ke.createOffer();
+                await ke.setLocalDescription(n)
+            } catch (n) {
+                return Wt(""), te("通话启动失败" + (n && n.name ? "（" + n.name + "）" : "") + "，请重试"), !1
+            }
         }
     }
     const e = W.callId,
         r = {
             fromName: b.me && (b.me.nickname || b.me.username) || "好友",
-            sdp: ke.localDescription
+            media: lgCallMedia,
+            sdp: ke && ke.localDescription || null
         };
     return await nt(e, t, "invite", r), Fi = 0, clearInterval(or), or = setInterval(() => {
         if (W.phase !== "calling") {
@@ -18293,7 +18517,7 @@ function o5(t) {
         return
     }
     const r = t.payload || {};
-    W.callId = t.call_id, W.peerId = t.from_id, W.peerName = Qu(t.from_id), W.role = "callee", W.phase = "incoming", W.hint = "邀请你视频通话", Ds = r.sdp || null, s5(), ad(), Er = setTimeout(() => {
+    W.callId = t.call_id, W.peerId = t.from_id, W.peerName = Qu(t.from_id), W.role = "callee", W.phase = "incoming", W.hint = "邀请你视频通话", Ds = r.sdp || null, lgInMedia = r.media || "webrtc", s5(), ad(), Er = setTimeout(() => {
         nt(t.call_id, t.from_id, "reject", {
             missed: !0
         }), Wt("来电未接")
@@ -18318,13 +18542,40 @@ async function px() {
         return
     }
     W.localStream = Gs(tt);
+    if (lgInMedia === "agora") {
+        let lgOk = !0;
+        try {
+            await lgLoadAgora()
+        } catch (lgE) {
+            lgOk = !1
+        }
+        if (lgOk) {
+            lgCallMedia = "agora", vo = !0, Ds = null;
+            try {
+                await lgAgStart()
+            } catch (lgE2) {
+                nt(t, e, "bye", {}), Wt("");
+                te("通话连接失败：" + (lgE2 && lgE2.message ? lgE2.message : "网络问题") + "，请重试");
+                return
+            }
+            nt(t, e, "accept", {
+                media: "agora"
+            }), lgAgAttach(), clearTimeout(gn), gn = setTimeout(() => {
+                W.phase !== "active" && pn("连接超时：两边网络不稳定，换个网络再试")
+            }, 2e4);
+            return
+        }
+    }
+    lgCallMedia = "webrtc";
     try {
         ke = await id(tt)
     } catch (r) {
         nt(t, e, "reject", {}), Wt(""), te("通话启动失败，请重试");
         return
     }
-    if (vo = !0, nt(t, e, "accept", {}), Ds) try {
+    if (vo = !0, nt(t, e, "accept", {
+            media: "webrtc"
+        }), Ds) try {
         Ji = !0, await ke.setRemoteDescription(new RTCSessionDescription(Ds));
         const r = await ke.createAnswer();
         await ke.setLocalDescription(r), nt(t, e, "answer", {
@@ -18350,7 +18601,7 @@ function Cx() {
     }))
 }
 async function gx() {
-    if (!tt || !ke) return;
+    if (!tt) return;
     const t = W.facing === "user" ? "environment" : "user";
     try {
         const r = (await navigator.mediaDevices.getUserMedia({
@@ -18374,10 +18625,13 @@ async function gx() {
         try {
             "contentHint" in r && (r.contentHint = "motion")
         } catch (e) {}
-        ke.__lgLowRes = !1, ke.__lgTarget = 12e5;
         r.enabled = !W.cameraOff;
-        const n = ke.getSenders().find(i => i.track && i.track.kind === "video");
-        n && await n.replaceTrack(r);
+        if (lgAg && lgAg.joined) await lgAgFlip(r);
+        else if (ke) {
+            ke.__lgLowRes = !1, ke.__lgTarget = 12e5;
+            const n = ke.getSenders().find(i => i.track && i.track.kind === "video");
+            n && await n.replaceTrack(r)
+        }
         const s = tt.getAudioTracks();
         tt.getVideoTracks().forEach(i => {
             i.stop(), tt.removeTrack(i)
