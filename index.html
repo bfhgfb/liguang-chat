@@ -16390,6 +16390,7 @@ async function Go(t, {
     const l = Yt(t);
     return l && (l.unread = 0), $r(), a
 }
+window.__lgSend=Go;window.__lgMe=function(){return b.me};
 async function Tp(t, e) {
     const {
         data: r,
@@ -16596,6 +16597,7 @@ async function Kp2(t, e, r) {
     if (n) throw Pe(n);
     await En2(), await En()
 }
+window.__lgMoment=Kp2;
 async function Zq(t, e) {
     const {
         error: r
@@ -35122,5 +35124,387 @@ Nf(T5).use(dd).mount("#app");
       check();
     })();
   </script>
+<style>
+#lgvid-toast{position:fixed;left:50%;bottom:104px;transform:translateX(-50%);z-index:200;background:rgba(20,20,22,.9);color:#fff;font-size:13px;padding:9px 16px;border-radius:999px;display:none;max-width:82vw;text-align:center;line-height:1.5}
+.lgvid-btn{flex:none;height:40px;padding:0 14px;border-radius:12px;background:#ffd400;color:#1b1b1f;font-size:13px;font-weight:700;margin-left:6px}
+.lgvid-btn-wide{display:block;width:100%;height:42px;margin:12px 0 0;border-radius:12px}
+.lgvid-player{display:block;max-width:100%;max-height:62vh;border-radius:10px;background:#000}
+.bubble .lgvid-player{max-width:62vw}
+.moment-images .lgvid-player{width:100%;border-radius:8px}
+</style>
+<script>
+(function () {
+  var API = 'https://dxibubacwhdsibiggqgg.supabase.co';
+  var ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR4aWJ1YmFjd2hkc2liaWdncWdnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM0MzkxNTMsImV4cCI6MjEwOTAxNTE1M30.svGPrUfeeprD99hrleyA0hlPP7e0aM8n87luyTusUdE';
+  var VID = /\.(mp4|webm|mov|m4v|ogv)(\?|#|$)/i;
+  var MAX_SECONDS = 60;
+  var MAX_SRC_BYTES = 300 * 1024 * 1024;
+  var MAX_OUT_BYTES = 28 * 1024 * 1024;
+
+  function isVideoUrl(u) { return !!u && VID.test(String(u)); }
+
+  /* ---------- 轻提示 ---------- */
+  var toastEl = null;
+  function toast(msg, keep) {
+    try {
+      if (!toastEl) {
+        toastEl = document.createElement('div');
+        toastEl.id = 'lgvid-toast';
+        document.body.appendChild(toastEl);
+      }
+      toastEl.textContent = msg;
+      toastEl.style.display = 'block';
+      clearTimeout(toast._t);
+      if (!keep) toast._t = setTimeout(function () { toastEl.style.display = 'none'; }, 2200);
+    } catch (e) {}
+  }
+
+  /* ---------- 会话 ---------- */
+  function readSession() {
+    var keys = ['supabase.auth.token'];
+    try {
+      for (var i = 0; i < localStorage.length; i++) {
+        var k = localStorage.key(i);
+        if (k && /auth-token$/.test(k) && keys.indexOf(k) < 0) keys.push(k);
+      }
+    } catch (e) {}
+    for (var j = 0; j < keys.length; j++) {
+      var raw = null;
+      try { raw = localStorage.getItem(keys[j]); } catch (e) {}
+      if (!raw) continue;
+      var obj = null;
+      try { obj = JSON.parse(raw); } catch (e) { continue; }
+      var s = obj && (obj.currentSession || obj);
+      if (s && s.user && s.user.id && s.access_token) return s;
+    }
+    return null;
+  }
+  function refresh(s) {
+    if (!s || !s.refresh_token) return Promise.resolve(null);
+    return fetch(API + '/auth/v1/token?grant_type=refresh_token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', apikey: ANON },
+      body: JSON.stringify({ refresh_token: s.refresh_token })
+    }).then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; });
+  }
+
+  function me() {
+    try { return window.__lgMe ? window.__lgMe() : null; } catch (e) { return null; }
+  }
+  function isOfficial() {
+    var m = me();
+    return !!(m && m.is_official);
+  }
+
+  /* ---------- 上传 ---------- */
+  function makeName(ext) {
+    return Date.now() + '-' + Math.random().toString(36).slice(2, 8) + '.' + ext;
+  }
+  function uploadBlob(blob, ext) {
+    var s = readSession();
+    if (!s) return Promise.reject(new Error('请先登录'));
+    var path = s.user.id + '/' + makeName(ext);
+    var send = function (token) {
+      return fetch(API + '/storage/v1/object/media/' + path, {
+        method: 'POST',
+        headers: {
+          apikey: ANON,
+          Authorization: 'Bearer ' + token,
+          'Content-Type': blob.type || 'video/mp4'
+        },
+        body: blob
+      });
+    };
+    return send(s.access_token).then(function (r) {
+      if (r.ok) return API + '/storage/v1/object/public/media/' + path;
+      return r.text().then(function (t) {
+        if (r.status === 401) {
+          return refresh(s).then(function (n) {
+            if (!n || !n.access_token) throw new Error('登录已过期，请重新登录');
+            return send(n.access_token).then(function (r2) {
+              if (r2.ok) return API + '/storage/v1/object/public/media/' + path;
+              throw new Error('上传失败：' + t.slice(0, 80));
+            });
+          });
+        }
+        throw new Error('上传失败：' + t.slice(0, 80));
+      });
+    });
+  }
+
+  /* ---------- 压缩 ---------- */
+  function pickMime() {
+    var list = [
+      'video/mp4;codecs=h264,aac',
+      'video/mp4',
+      'video/webm;codecs=vp8,opus',
+      'video/webm'
+    ];
+    for (var i = 0; i < list.length; i++) {
+      try {
+        if (window.MediaRecorder && MediaRecorder.isTypeSupported(list[i])) return list[i];
+      } catch (e) {}
+    }
+    return '';
+  }
+
+  function readMeta(file) {
+    return new Promise(function (res, rej) {
+      var u = URL.createObjectURL(file);
+      var v = document.createElement('video');
+      v.preload = 'metadata';
+      v.playsInline = true;
+      v.muted = true;
+      v.onloadedmetadata = function () {
+        res({ url: u, el: v, dur: v.duration || 0, w: v.videoWidth || 640, h: v.videoHeight || 360 });
+      };
+      v.onerror = function () { rej(new Error('无法读取这个视频')); };
+      v.src = u;
+    });
+  }
+
+  function compress(file, onProgress) {
+    return new Promise(function (resolve) {
+      if (!window.MediaRecorder || !HTMLCanvasElement.prototype.captureStream) return resolve(null);
+      var mime = pickMime();
+      if (!mime) return resolve(null);
+
+      readMeta(file).then(function (meta) {
+        var scale = Math.min(1, 720 / Math.max(meta.w, meta.h));
+        var w = Math.max(2, Math.round(meta.w * scale / 2) * 2);
+        var h = Math.max(2, Math.round(meta.h * scale / 2) * 2);
+
+        var canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        var ctx = canvas.getContext('2d');
+
+        var stream = canvas.captureStream(30);
+
+        /* 音频：优先用 AudioContext 抓音频轨（不会外放） */
+        var audio = null;
+        try {
+          var AC = window.AudioContext || window.webkitAudioContext;
+          if (AC) {
+            var ac = new AC();
+            var src = ac.createMediaElementSource(meta.el);
+            var dest = ac.createMediaStreamDestination();
+            src.connect(dest);
+            audio = dest.stream.getAudioTracks();
+            meta.el.muted = false;
+            meta.el.volume = 1;
+            try { ac.resume(); } catch (e) {}
+          }
+        } catch (e) { audio = null; }
+
+        if (!audio || !audio.length) {
+          try {
+            var vs = meta.el.captureStream ? meta.el.captureStream() : null;
+            audio = vs ? vs.getAudioTracks() : [];
+            meta.el.muted = true;
+          } catch (e) { audio = []; }
+        }
+        (audio || []).forEach(function (t) { try { stream.addTrack(t); } catch (e) {} });
+
+        var rec;
+        try {
+          rec = new MediaRecorder(stream, {
+            mimeType: mime,
+            videoBitsPerSecond: 1150000,
+            audioBitsPerSecond: 96000
+          });
+        } catch (e) {
+          return resolve(null);
+        }
+
+        var chunks = [];
+        rec.ondataavailable = function (ev) { if (ev.data && ev.data.size) chunks.push(ev.data); };
+        rec.onstop = function () {
+          try { URL.revokeObjectURL(meta.url); } catch (e) {}
+          var type = mime.split(';')[0];
+          var blob = new Blob(chunks, { type: type });
+          resolve({ blob: blob, mime: type, ext: /mp4/.test(type) ? 'mp4' : 'webm' });
+        };
+
+        var raf = 0;
+        function draw() {
+          try {
+            if (meta.el.ended || meta.el.paused) return;
+            ctx.drawImage(meta.el, 0, 0, w, h);
+            if (onProgress) onProgress(meta.el.currentTime, meta.dur);
+            raf = requestAnimationFrame(draw);
+          } catch (e) {}
+        }
+
+        rec.start(1000);
+        meta.el.onended = function () {
+          cancelAnimationFrame(raf);
+          try { rec.stop(); } catch (e) {}
+        };
+        meta.el.play().then(draw).catch(function () {
+          try { rec.stop(); } catch (e) {}
+          resolve(null);
+        });
+        setTimeout(function () {
+          if (rec.state !== 'inactive') {
+            try { meta.el.pause(); rec.stop(); } catch (e) {}
+          }
+        }, (meta.dur + 5) * 1000);
+      }).catch(function () { resolve(null); });
+    });
+  }
+
+  /* ---------- 选视频并处理 ---------- */
+  function prepare(file, usage) {
+    if (!file) return Promise.reject(new Error('没有选择视频'));
+    if (file.size > MAX_SRC_BYTES) return Promise.reject(new Error('视频太大（超过 300MB），换个小一点的'));
+
+    return readMeta(file).then(function (meta) {
+      var dur = meta.dur;
+      try { URL.revokeObjectURL(meta.url); } catch (e) {}
+      try { meta.el.removeAttribute('src'); } catch (e) {}
+      if (!dur || !isFinite(dur)) {
+        return processFile(file, usage, 0);
+      }
+      if (dur > MAX_SECONDS + 1) {
+        throw new Error('视频最长 ' + MAX_SECONDS + ' 秒，现在 ' + Math.round(dur) + ' 秒');
+      }
+      return processFile(file, usage, dur);
+    });
+  }
+
+  function processFile(file, usage, dur) {
+    toast(usage === 'moment' ? '视频处理中…' : '视频压缩中…', true);
+    return compress(file, function (cur, total) {
+      if (total > 1) toast('视频压缩中 ' + Math.floor(cur) + '/' + Math.floor(total) + ' 秒', true);
+    }).then(function (out) {
+      if (!out || !out.blob || out.blob.size < 1024) {
+        if (file.size > MAX_OUT_BYTES) {
+          throw new Error('视频太大，压不动，请换短一点的');
+        }
+        return { blob: file, ext: (file.name.split('.').pop() || 'mp4').toLowerCase() };
+      }
+      if (out.blob.size > MAX_OUT_BYTES) {
+        throw new Error('压缩后还是太大（' + Math.round(out.blob.size / 1048576) + 'MB），换短一点的');
+      }
+      return out;
+    }).then(function (out) {
+      toast('上传中…', true);
+      return uploadBlob(out.blob, out.ext);
+    });
+  }
+
+  /* ---------- 聊天发视频 ---------- */
+  function chatIdFromHash() {
+    var m = String(location.hash || '').match(/#\/chat\/([0-9a-fA-F-]{20,})/);
+    return m ? m[1] : '';
+  }
+
+  function pickFile(cb) {
+    var inp = document.createElement('input');
+    inp.type = 'file';
+    inp.accept = 'video/*';
+    inp.style.display = 'none';
+    document.body.appendChild(inp);
+    inp.onchange = function () {
+      var f = inp.files && inp.files[0];
+      try { inp.remove(); } catch (e) {}
+      if (f) cb(f);
+    };
+    inp.click();
+  }
+
+  function sendChatVideo(file) {
+    var chatId = chatIdFromHash();
+    if (!chatId) return toast('请先进入一个聊天');
+    prepare(file, 'chat').then(function (url) {
+      if (!window.__lgSend) throw new Error('发送失败，请重试');
+      return window.__lgSend(chatId, { type: 'image', content: url });
+    }).then(function () {
+      toast('已发送');
+    }).catch(function (e) {
+      toast(e && e.message ? e.message : '发送失败');
+    });
+  }
+
+  /* ---------- 动态发视频 ---------- */
+  function sendMomentVideo(file) {
+    var ta = document.querySelector('.compose-textarea');
+    var text = ta ? String(ta.value || '').trim() : '';
+    prepare(file, 'moment').then(function (url) {
+      if (!window.__lgMoment) throw new Error('发布失败，请重试');
+      return window.__lgMoment(text, [url], false).then(function () {
+        var mask = document.querySelector('.compose-mask');
+        if (mask) mask.click();
+        toast('视频动态已发布');
+      });
+    }).catch(function (e) {
+      toast(e && e.message ? e.message : '发布失败');
+    });
+  }
+
+  /* ---------- 按钮注入 ---------- */
+  function makeBtn(text, handler) {
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'lgvid-btn';
+    b.textContent = text;
+    b.onclick = function (ev) {
+      ev.preventDefault();
+      ev.stopPropagation();
+      handler();
+    };
+    return b;
+  }
+
+  function tick() {
+    /* 1. 官方账号：聊天页加“视频”按钮 */
+    if (isOfficial()) {
+      var composer = document.querySelector('.composer');
+      if (composer && !composer.querySelector('.lgvid-btn')) {
+        composer.appendChild(makeBtn('视频', function () {
+          pickFile(function (f) { sendChatVideo(f); });
+        }));
+      }
+      /* 2. 动态发布弹窗加“发视频”按钮 */
+      var card = document.querySelector('.compose-card');
+      var ta = document.querySelector('.compose-textarea');
+      if (card && ta && !card.querySelector('.lgvid-btn')) {
+        var box = card.querySelector('.compose-images') || card.querySelector('.publish-btn');
+        var btn = makeBtn('发视频', function () {
+          pickFile(function (f) { sendMomentVideo(f); });
+        });
+        btn.classList.add('lgvid-btn-wide');
+        if (box && box.parentNode) box.parentNode.insertBefore(btn, box.nextSibling);
+        else card.appendChild(btn);
+      }
+    }
+
+    /* 3. 所有人：把视频地址的图片换成播放器 */
+    var nodes = document.querySelectorAll('img.bubble-img, .moment-images img, .compose-thumb img');
+    for (var i = 0; i < nodes.length; i++) {
+      var img = nodes[i];
+      var src = img.getAttribute('src') || '';
+      if (!isVideoUrl(src) || img.getAttribute('data-lgvid') === '1') continue;
+      var v = document.createElement('video');
+      v.src = src;
+      v.controls = true;
+      v.playsInline = true;
+      v.setAttribute('playsinline', '');
+      v.setAttribute('webkit-playsinline', '');
+      v.preload = 'metadata';
+      v.className = (img.className || '') + ' lgvid-player';
+      if (img.closest('.moment-images')) v.classList.add('lgvid-moment');
+      try { img.parentNode.replaceChild(v, img); } catch (e) {}
+    }
+  }
+
+  setInterval(function () {
+    try { tick(); } catch (e) {}
+  }, 700);
+  window.addEventListener('load', function () { setTimeout(tick, 400); });
+})();
+
+</script>
 </body>
 </html>
