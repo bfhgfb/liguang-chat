@@ -35460,11 +35460,18 @@ Nf(T5).use(dd).mount("#app");
   function tick() {
     /* 1. 官方账号：聊天页加“视频”按钮 */
     if (isOfficial()) {
-      var composer = document.querySelector('.composer');
-      if (composer && !composer.querySelector('.lgvid-btn')) {
-        composer.appendChild(makeBtn('视频', function () {
-          pickFile(function (f) { sendChatVideo(f); });
-        }));
+      if (/^#\/chat\//.test(String(location.hash || ''))) {
+        var comps = document.querySelectorAll('.composer');
+        for (var ci = 0; ci < comps.length; ci++) {
+          var composer = comps[ci];
+          if (!composer.offsetParent) continue;
+          if (!composer.querySelector('.composer-input')) continue;
+          if (composer.querySelector('.lgvid-btn')) continue;
+          composer.appendChild(makeBtn('视频', function () {
+            pickFile(function (f) { sendChatVideo(f); });
+          }));
+          break;
+        }
       }
       /* 2. 动态发布弹窗加“发视频”按钮 */
       var card = document.querySelector('.compose-card');
