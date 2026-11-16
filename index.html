@@ -73,6 +73,57 @@
       iceServers: []
     };
   </script>
+  <script>
+    /* 通话中切到后台再回到前台：修复“声音还在、画面卡住”
+       1) 记录所有 RTCPeerConnection；
+       2) 回到前台时，连接断开的调用 restartIce() 重连；
+       3) 视频元素重新挂载流并重新播放，强制重绘画面。 */
+    (function () {
+      var Orig = window.RTCPeerConnection;
+      if (!Orig) return;
+      window.__lgPCs = [];
+      function Wrapped(cfg, cons) {
+        var pc = cons ? new Orig(cfg, cons) : new Orig(cfg);
+        try { window.__lgPCs.push(pc); } catch (e) {}
+        return pc;
+      }
+      Wrapped.prototype = Orig.prototype;
+      try {
+        if (Orig.generateCertificate) Wrapped.generateCertificate = Orig.generateCertificate.bind(Orig);
+        window.RTCPeerConnection = Wrapped;
+      } catch (e) {}
+      function resume() {
+        var pcs = window.__lgPCs || [];
+        for (var i = 0; i < pcs.length; i++) {
+          try {
+            var st = pcs[i].iceConnectionState;
+            if (st === "disconnected" || st === "failed") pcs[i].restartIce();
+          } catch (e) {}
+        }
+        var vs = document.querySelectorAll("video");
+        for (var j = 0; j < vs.length; j++) {
+          var v = vs[j];
+          try {
+            var s = v.srcObject;
+            if (s && s.getTracks) {
+              var live = false;
+              var ts = s.getTracks();
+              for (var k = 0; k < ts.length; k++) if (ts[k].readyState === "live") live = true;
+              if (live) { v.srcObject = null; v.srcObject = s; }
+            }
+            var p = v.play();
+            if (p && p.catch) p.catch(function () {});
+          } catch (e) {}
+        }
+      }
+      document.addEventListener("visibilitychange", function () {
+        if (document.visibilityState !== "visible") return;
+        setTimeout(resume, 120);
+        setTimeout(resume, 800);
+      });
+      window.addEventListener("focus", function () { setTimeout(resume, 250); });
+    })();
+  </script>
   <script type="module" crossorigin>
 (function() {
     const e = document.createElement("link").relList;

@@ -45,5 +45,12 @@ export default {
     const c = corsHeaders(request);
     for (const k in c) out.headers.set(k, c[k]);
     return out;
+  },
+
+  /* 保活：Supabase 免费版 7 天无请求会被暂停，这里每 2 天自动访问一次 */
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(
+      fetch(UPSTREAM + '/auth/v1/health', { headers: { apikey: 'keepalive' } }).catch(() => {})
+    );
   }
 };
