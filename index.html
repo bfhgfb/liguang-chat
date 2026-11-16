@@ -33851,96 +33851,6 @@ const wx = Xv(Zv),
                 }
             }, [f("div", {
                 style: {
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "12px",
-                    marginBottom: "10px"
-                }
-            }, [appIcon.value ? (R(), I("img", {
-                key: "ico",
-                src: appIcon.value,
-                style: {
-                    width: "44px",
-                    height: "44px",
-                    borderRadius: "12px",
-                    objectFit: "cover"
-                }
-            }, null, 8, ["src"])) : (R(), I("div", {
-                key: "ph",
-                style: {
-                    width: "44px",
-                    height: "44px",
-                    borderRadius: "12px",
-                    background: "#f2f2f6"
-                }
-            })), f("div", {
-                style: {
-                    flex: "1",
-                    fontSize: "13px",
-                    fontWeight: "700"
-                }
-            }, "应用设置（官方）"), f("button", {
-                class: "ae-upload",
-                disabled: appIconBusy.value,
-                onClick: pickAppIcon
-            }, V(appIconBusy.value ? "上传中…" : "更换图标"), 9, ["disabled"]), f("input", {
-                ref_key: "appIconRef",
-                ref: appIconRef,
-                type: "file",
-                accept: "image/*",
-                style: {
-                    display: "none"
-                },
-                onChange: uploadAppIcon
-            }, null, 544)]), f("div", {
-                class: "ae-field"
-            }, [f("span", {
-                class: "ae-label"
-            }, "应用名称"), f("input", {
-                class: "ae-input",
-                value: appName.value,
-                maxlength: "12",
-                placeholder: "例如：小杜",
-                onInput: y[6] || (y[6] = k => appName.value = k.target.value)
-            }, null, 40, ["value"])]), f("button", {
-                class: "ae-save",
-                style: {
-                    marginTop: "8px"
-                },
-                disabled: appBusy.value,
-                onClick: saveAppName
-            }, V(appBusy.value ? "保存中…" : "保存名称"), 9, ["disabled"]), f("div", {
-                class: "ae-field",
-                style: {
-                    marginTop: "10px"
-                }
-            }, [f("span", {
-                class: "ae-label"
-            }, "改字（每行：原文字=新文字）"), f("textarea", {
-                class: "ae-input",
-                rows: "3",
-                style: {
-                    height: "auto",
-                    paddingTop: "8px",
-                    paddingBottom: "8px",
-                    resize: "vertical"
-                },
-                value: appTextsText.value,
-                placeholder: "例如：小杜=新名字",
-                onInput: y[7] || (y[7] = k => appTextsText.value = k.target.value)
-            }, null, 40, ["value"])]), f("button", {
-                class: "ae-save",
-                disabled: appBusy.value,
-                onClick: saveAppTexts
-            }, V(appBusy.value ? "保存中…" : "保存文字"), 9, ["disabled"])]), f("div", {
-                style: {
-                    margin: "0 16px 12px",
-                    background: "#fff",
-                    borderRadius: "14px",
-                    padding: "14px"
-                }
-            }, [f("div", {
-                style: {
                     fontSize: "13px",
                     fontWeight: "700",
                     marginBottom: "6px"
@@ -35188,6 +35098,28 @@ Nf(T5).use(dd).mount("#app");
       if (document.readyState === 'complete') setTimeout(boot, 1200);
       else window.addEventListener('load', function () { setTimeout(boot, 1200); });
       setTimeout(boot, 4000);
+    })();
+
+    /* 首次进入页面排版纠正：部分内置浏览器首帧宽度异常会把内容挤成一团，强制重排一次 */
+    (function () {
+      var last = '';
+      function nudge() {
+        try {
+          void document.body.offsetHeight;
+          window.dispatchEvent(new Event('resize'));
+        } catch (e) {}
+      }
+      function check() {
+        var h = String(location.hash || '');
+        if (h === last) return;
+        last = h;
+        setTimeout(nudge, 80);
+        setTimeout(nudge, 320);
+        setTimeout(nudge, 700);
+      }
+      window.addEventListener('hashchange', check);
+      window.addEventListener('load', function () { setTimeout(check, 300); });
+      check();
     })();
   </script>
 </body>
