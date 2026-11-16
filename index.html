@@ -18117,13 +18117,52 @@ function setupAdaptiveLg(pc, stream) {
         } catch (e) {}
     }, 2e3)
 }
-/* ===== 声网 Agora 视频通话（App ID 模式，无 Token） ===== */
+/* ===== 声网 Agora 视频通话（Token 由 Cloudflare Worker 生成） ===== */
 let lgAg = null,
     lgAgLoad = null,
+    lgToken = "",
     lgCallMedia = "webrtc";
 
 function lgAgoraAppId() {
     return String(window.__AGORA_APP_ID__ || "")
+}
+
+/* 向 Cloudflare Worker 申请本次通话的 Token（频道 + 自己的 uid）。
+   拿不到 Token 就自动退回原来的直连方式，不会影响同网络通话。 */
+async function lgFetchToken(ch, uid) {
+    var base = String(window.__AGORA_TOKEN_URL__ || window.__SB_PROXY__ || "").replace(/\/+$/, "");
+    if (!base) return "";
+    var ctrl = new AbortController,
+        tm = setTimeout(function () {
+            ctrl.abort()
+        }, 5e3);
+    try {
+        var r;
+        try {
+            r = await fetch(base + "/agora-token?channel=" + encodeURIComponent(ch) + "&uid=" + uid, {
+                cache: "no-store",
+                signal: ctrl.signal
+            })
+        } finally {
+            clearTimeout(tm)
+        }
+        if (!r.ok) return "";
+        var d = await r.json();
+        return d && d.token ? String(d.token) : ""
+    } catch (e) {
+        return ""
+    }
+}
+
+async function lgAgPrepare() {
+    lgToken = "";
+    try {
+        await lgLoadAgora()
+    } catch (e) {
+        return !1
+    }
+    var t = await lgFetchToken(W.callId, lgUidOf(b.me && b.me.id));
+    return t ? (lgToken = t, !0) : !1
 }
 
 function lgLoadAgora() {
@@ -18173,7 +18212,7 @@ function lgAgState() {
 
 function lgAgReset() {
     var t = lgAg;
-    lgAg = null, lgCallMedia = "webrtc";
+    lgAg = null, lgCallMedia = "webrtc", lgToken = "";
     if (!t) return;
     /* 不调用 cam/mic 的 stop()：它们包装的是通话共用的摄像头/麦克风轨道，
        停掉会导致退回 WebRTC 时没有画面和声音。leave() 已经会取消发布。 */
@@ -18257,7 +18296,7 @@ async function lgAgStart() {
         e === "CONNECTED" && lgAgAttach()
     }));
     t.uid || (t.uid = lgUidOf(b.me && b.me.id));
-    t.joined || (await t.client.join(lgAgoraAppId(), W.callId, null, t.uid), t.joined = !0);
+    t.joined || (await t.client.join(lgAgoraAppId(), W.callId, lgToken || null, t.uid), t.joined = !0);
     await lgAgPublish(), lgAgAttach()
 }
 
@@ -18457,7 +18496,7 @@ async function i5(t) {
     W.localStream = Gs(tt);
     let lgUseAg = !1;
     try {
-        await lgLoadAgora(), lgUseAg = !0
+        lgUseAg = await lgAgPrepare()
     } catch (lgE) {
         lgUseAg = !1
     }
@@ -18543,9 +18582,9 @@ async function px() {
     }
     W.localStream = Gs(tt);
     if (lgInMedia === "agora") {
-        let lgOk = !0;
+        let lgOk = !1;
         try {
-            await lgLoadAgora()
+            lgOk = await lgAgPrepare()
         } catch (lgE) {
             lgOk = !1
         }
