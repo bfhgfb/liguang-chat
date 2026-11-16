@@ -107,7 +107,7 @@
       } catch (e) {}
       if (!force && (ep === 'direct' || ep === 'proxy') && now - at < 600000) return Promise.resolve(ep);
       var p1 = window.__lgProbe(window.__SB_DIRECT__, 2500).then(function (ok) { return ok ? 'direct' : ''; });
-      var p2 = window.__lgProbe(window.__SB_PROXY__, 2500).then(function (ok) { return ok ? 'proxy' : ''; });
+      var p2 = window.__lgProbe(window.__SB_PROXY__, 4000).then(function (ok) { return ok ? 'proxy' : ''; });
       return Promise.all([p1, p2]).then(function (r) {
         var pick = '';
         if (r[0] && r[1]) pick = ep === 'proxy' ? 'proxy' : 'direct';
