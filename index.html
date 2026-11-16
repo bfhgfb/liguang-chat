@@ -52,8 +52,15 @@
        若部分用户连不上后端，把 Cloudflare Worker 反代地址填在这里，例如
        window.__SB_URL__ = "https://supabase-proxy.xxx.workers.dev";
        只改这一处即可，登录/消息/文件/实时全部走新地址。 */
-    window.__SB_URL__ = "";
-    window.__SB_BASE__ = (window.__SB_URL__ || "https://dxibubacwhdsibiggqgg.supabase.co").replace(/\/+$/, "");
+    window.__SB_DIRECT__ = "https://dxibubacwhdsibiggqgg.supabase.co";
+    /* 反代地址（Cloudflare Worker），直连不通时自动切换到这里 */
+    window.__SB_PROXY__ = "https://supa-proxy.2135187763.workers.dev";
+    (function () {
+      var useProxy = false;
+      try { useProxy = localStorage.getItem('lg_use_proxy') === '1'; } catch (e) {}
+      window.__SB_BASE__ = (useProxy && window.__SB_PROXY__ ? window.__SB_PROXY__ : window.__SB_DIRECT__).replace(/\/+$/, "");
+      window.__SB_URL__ = window.__SB_BASE__ === window.__SB_PROXY__ ? window.__SB_PROXY__ : "";
+    })();
   </script>
   <script>
     /* 通话中转 TURN 配置：使用 OpenRelay 的 static-auth 中继，前端用共享密钥动态生成
@@ -16098,7 +16105,21 @@ async function P0(t, e = 3) {
 }
 
 function la(t) {
-    return Or(t) ? new Error("连不上服务器：已自动重试 3 次。请切换 Wi-Fi / 4G，确认手机时间正确后再试。") : Pe(t)
+    if (Or(t)) {
+        try {
+            var n = parseInt(sessionStorage.getItem('lg_sw') || '0', 10);
+            if (window.__SB_PROXY__ && window.__SB_DIRECT__ && n < 3) {
+                sessionStorage.setItem('lg_sw', String(n + 1));
+                var onProxy = false;
+                try { onProxy = localStorage.getItem('lg_use_proxy') === '1'; } catch (e) {}
+                localStorage.setItem('lg_use_proxy', onProxy ? '0' : '1');
+                setTimeout(function () { location.reload(); }, 700);
+                return new Error("当前网络连不上，正在自动切换线路…")
+            }
+        } catch (e) {}
+        return new Error("连不上服务器：已自动重试 3 次。请切换 Wi-Fi / 4G，确认手机时间正确后再试。")
+    }
+    return Pe(t)
 }
 async function yp(t, e) {
     const r = hp(t),
