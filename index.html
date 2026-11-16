@@ -35125,14 +35125,22 @@ Nf(T5).use(dd).mount("#app");
     })();
   </script>
 <style>
-#lgvid-toast{position:fixed;left:50%;bottom:104px;transform:translateX(-50%);z-index:200;background:rgba(20,20,22,.9);color:#fff;font-size:13px;padding:9px 16px;border-radius:999px;display:none;max-width:82vw;text-align:center;line-height:1.5}
+#lgvid-toast{position:fixed;left:50%;bottom:104px;transform:translateX(-50%);z-index:500;background:rgba(20,20,22,.9);color:#fff;font-size:13px;padding:9px 16px;border-radius:999px;display:none;max-width:82vw;text-align:center;line-height:1.5}
 .lgvid-fab{position:fixed;right:12px;bottom:calc(88px + env(safe-area-inset-bottom));z-index:60;height:42px;padding:0 18px;border-radius:999px;background:#ffd400;color:#1b1b1f;font-size:13.5px;font-weight:800;box-shadow:0 8px 20px rgba(0,0,0,.22);border:0}
 .lgvid-fab:active{transform:scale(.96)}
 .lgvid-btn{flex:none;height:40px;padding:0 14px;border-radius:12px;background:#ffd400;color:#1b1b1f;font-size:13px;font-weight:700;margin-left:6px}
 .lgvid-btn-wide{display:block;width:100%;height:42px;margin:12px 0 0;border-radius:12px}
-.lgvid-player{display:block;max-width:100%;max-height:62vh;border-radius:10px;background:#000}
-.bubble .lgvid-player{max-width:62vw}
-.moment-images .lgvid-player{width:100%;border-radius:8px}
+.lgvid-wrap{position:relative;display:block;width:100%;max-width:100%;background:#000;border-radius:10px;overflow:hidden;line-height:0}
+.lgvid-video{display:block;width:100%;max-height:62vh;background:#000}
+.bubble .lgvid-wrap{max-width:62vw}
+.lgvid-big{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:56px;height:56px;border-radius:50%;border:0;background:rgba(0,0,0,.45);color:#fff;font-size:20px;line-height:56px;padding:0;text-align:center}
+.lgvid-bar{position:absolute;left:0;right:0;bottom:0;display:flex;align-items:center;gap:6px;padding:6px 8px;background:linear-gradient(rgba(0,0,0,0),rgba(0,0,0,.66))}
+.lgvid-ctl{flex:none;border:0;border-radius:8px;background:rgba(255,255,255,.2);color:#fff;font-size:12px;padding:5px 9px}
+.lgvid-time{flex:1;color:#fff;font-size:11px;text-align:left;white-space:nowrap;overflow:hidden}
+.lgvid-fs{position:fixed;inset:0;z-index:400;background:#000;display:flex;align-items:center;justify-content:center}
+.lgvid-fs .lgvid-wrap{width:100%;max-width:100%;border-radius:0;background:#000}
+.lgvid-fs .lgvid-video{max-height:100vh;width:100%;object-fit:contain}
+.lgvid-close{position:absolute;top:calc(10px + env(safe-area-inset-top));right:12px;z-index:2;border:0;border-radius:999px;background:rgba(255,255,255,.2);color:#fff;font-size:13px;padding:7px 14px}
 </style>
 <script>
 (function () {
@@ -35199,13 +35207,10 @@ Nf(T5).use(dd).mount("#app");
   }
 
   /* ---------- 上传 ---------- */
-  function makeName(ext) {
-    return Date.now() + '-' + Math.random().toString(36).slice(2, 8) + '.' + ext;
-  }
   function uploadBlob(blob, ext) {
     var s = readSession();
     if (!s) return Promise.reject(new Error('请先登录'));
-    var path = s.user.id + '/' + makeName(ext);
+    var path = s.user.id + '/' + Date.now() + '-' + Math.random().toString(36).slice(2, 8) + '.' + ext;
     var send = function (token) {
       return fetch(API + '/storage/v1/object/media/' + path, {
         method: 'POST',
@@ -35236,16 +35241,9 @@ Nf(T5).use(dd).mount("#app");
 
   /* ---------- 压缩 ---------- */
   function pickMime() {
-    var list = [
-      'video/mp4;codecs=h264,aac',
-      'video/mp4',
-      'video/webm;codecs=vp8,opus',
-      'video/webm'
-    ];
+    var list = ['video/mp4;codecs=h264,aac', 'video/mp4', 'video/webm;codecs=vp8,opus', 'video/webm'];
     for (var i = 0; i < list.length; i++) {
-      try {
-        if (window.MediaRecorder && MediaRecorder.isTypeSupported(list[i])) return list[i];
-      } catch (e) {}
+      try { if (window.MediaRecorder && MediaRecorder.isTypeSupported(list[i])) return list[i]; } catch (e) {}
     }
     return '';
   }
@@ -35280,10 +35278,8 @@ Nf(T5).use(dd).mount("#app");
         canvas.width = w;
         canvas.height = h;
         var ctx = canvas.getContext('2d');
-
         var stream = canvas.captureStream(30);
 
-        /* 音频：优先用 AudioContext 抓音频轨（不会外放） */
         var audio = null;
         try {
           var AC = window.AudioContext || window.webkitAudioContext;
@@ -35315,17 +35311,14 @@ Nf(T5).use(dd).mount("#app");
             videoBitsPerSecond: 1150000,
             audioBitsPerSecond: 96000
           });
-        } catch (e) {
-          return resolve(null);
-        }
+        } catch (e) { return resolve(null); }
 
         var chunks = [];
         rec.ondataavailable = function (ev) { if (ev.data && ev.data.size) chunks.push(ev.data); };
         rec.onstop = function () {
           try { URL.revokeObjectURL(meta.url); } catch (e) {}
           var type = mime.split(';')[0];
-          var blob = new Blob(chunks, { type: type });
-          resolve({ blob: blob, mime: type, ext: /mp4/.test(type) ? 'mp4' : 'webm' });
+          resolve({ blob: new Blob(chunks, { type: type }), mime: type, ext: /mp4/.test(type) ? 'mp4' : 'webm' });
         };
 
         var raf = 0;
@@ -35356,8 +35349,7 @@ Nf(T5).use(dd).mount("#app");
     });
   }
 
-  /* ---------- 选视频并处理 ---------- */
-  function prepare(file, usage) {
+  function prepare(file) {
     if (!file) return Promise.reject(new Error('没有选择视频'));
     if (file.size > MAX_SRC_BYTES) return Promise.reject(new Error('视频太大（超过 300MB），换个小一点的'));
 
@@ -35365,25 +35357,20 @@ Nf(T5).use(dd).mount("#app");
       var dur = meta.dur;
       try { URL.revokeObjectURL(meta.url); } catch (e) {}
       try { meta.el.removeAttribute('src'); } catch (e) {}
-      if (!dur || !isFinite(dur)) {
-        return processFile(file, usage, 0);
-      }
-      if (dur > MAX_SECONDS + 1) {
+      if (dur && isFinite(dur) && dur > MAX_SECONDS + 1) {
         throw new Error('视频最长 ' + MAX_SECONDS + ' 秒，现在 ' + Math.round(dur) + ' 秒');
       }
-      return processFile(file, usage, dur);
+      return processFile(file);
     });
   }
 
-  function processFile(file, usage, dur) {
-    toast(usage === 'moment' ? '视频处理中…' : '视频压缩中…', true);
+  function processFile(file) {
+    toast('视频压缩中…', true);
     return compress(file, function (cur, total) {
       if (total > 1) toast('视频压缩中 ' + Math.floor(cur) + '/' + Math.floor(total) + ' 秒', true);
     }).then(function (out) {
       if (!out || !out.blob || out.blob.size < 1024) {
-        if (file.size > MAX_OUT_BYTES) {
-          throw new Error('视频太大，压不动，请换短一点的');
-        }
+        if (file.size > MAX_OUT_BYTES) throw new Error('视频太大，压不动，请换短一点的');
         return { blob: file, ext: (file.name.split('.').pop() || 'mp4').toLowerCase() };
       }
       if (out.blob.size > MAX_OUT_BYTES) {
@@ -35396,7 +35383,7 @@ Nf(T5).use(dd).mount("#app");
     });
   }
 
-  /* ---------- 聊天发视频 ---------- */
+  /* ---------- 发送 ---------- */
   function chatIdFromHash() {
     var m = String(location.hash || '').match(/#\/chat\/([0-9a-fA-F-]{20,})/);
     return m ? m[1] : '';
@@ -35419,7 +35406,7 @@ Nf(T5).use(dd).mount("#app");
   function sendChatVideo(file) {
     var chatId = chatIdFromHash();
     if (!chatId) return toast('请先进入一个聊天');
-    prepare(file, 'chat').then(function (url) {
+    prepare(file).then(function (url) {
       if (!window.__lgSend) throw new Error('发送失败，请重试');
       return window.__lgSend(chatId, { type: 'image', content: url });
     }).then(function () {
@@ -35429,11 +35416,10 @@ Nf(T5).use(dd).mount("#app");
     });
   }
 
-  /* ---------- 动态发视频 ---------- */
   function sendMomentVideo(file) {
     var ta = document.querySelector('.compose-textarea');
     var text = ta ? String(ta.value || '').trim() : '';
-    prepare(file, 'moment').then(function (url) {
+    prepare(file).then(function (url) {
       if (!window.__lgMoment) throw new Error('发布失败，请重试');
       return window.__lgMoment(text, [url], false).then(function () {
         var mask = document.querySelector('.compose-mask');
@@ -35443,6 +35429,146 @@ Nf(T5).use(dd).mount("#app");
     }).catch(function (e) {
       toast(e && e.message ? e.message : '发布失败');
     });
+  }
+
+  /* ---------- 播放器（自绘控件，去掉系统菜单里的“下载视频”） ---------- */
+  function fmt(s) {
+    s = Math.max(0, Math.floor(s || 0));
+    var m = Math.floor(s / 60);
+    var r = s % 60;
+    return m + ':' + (r < 10 ? '0' + r : r);
+  }
+
+  function buildPlayer(src, opts) {
+    opts = opts || {};
+    var wrap = document.createElement('div');
+    wrap.className = 'lgvid-wrap';
+
+    var v = document.createElement('video');
+    v.className = 'lgvid-video';
+    v.src = src;
+    v.playsInline = true;
+    v.setAttribute('playsinline', '');
+    v.setAttribute('webkit-playsinline', '');
+    v.preload = 'metadata';
+    v.controls = false;
+    wrap.appendChild(v);
+
+    var big = document.createElement('button');
+    big.type = 'button';
+    big.className = 'lgvid-big';
+    big.textContent = '▶';
+    wrap.appendChild(big);
+
+    var bar = document.createElement('div');
+    bar.className = 'lgvid-bar';
+
+    var bPlay = document.createElement('button');
+    bPlay.type = 'button';
+    bPlay.className = 'lgvid-ctl';
+    bPlay.textContent = '播放';
+
+    var time = document.createElement('span');
+    time.className = 'lgvid-time';
+    time.textContent = '0:00';
+
+    var bMute = document.createElement('button');
+    bMute.type = 'button';
+    bMute.className = 'lgvid-ctl';
+    bMute.textContent = '有声';
+
+    var bFull = document.createElement('button');
+    bFull.type = 'button';
+    bFull.className = 'lgvid-ctl';
+    bFull.textContent = '放大';
+
+    bar.appendChild(bPlay);
+    bar.appendChild(time);
+    bar.appendChild(bMute);
+    bar.appendChild(bFull);
+    wrap.appendChild(bar);
+
+    function sync() {
+      var playing = !v.paused && !v.ended;
+      bPlay.textContent = playing ? '暂停' : '播放';
+      big.style.display = playing ? 'none' : 'block';
+      bMute.textContent = v.muted ? '静音' : '有声';
+    }
+
+    function toggle() {
+      if (v.paused || v.ended) {
+        var p = v.play();
+        if (p && p.catch) p.catch(function () {});
+      } else {
+        v.pause();
+      }
+    }
+
+    v.addEventListener('play', sync);
+    v.addEventListener('pause', sync);
+    v.addEventListener('ended', sync);
+    v.addEventListener('timeupdate', function () {
+      time.textContent = fmt(v.currentTime) + ' / ' + fmt(v.duration);
+    });
+    v.addEventListener('loadedmetadata', function () {
+      time.textContent = '0:00 / ' + fmt(v.duration);
+    });
+    v.addEventListener('click', toggle);
+    big.addEventListener('click', function (e) { e.stopPropagation(); toggle(); });
+    bPlay.addEventListener('click', function (e) { e.stopPropagation(); toggle(); });
+    bMute.addEventListener('click', function (e) {
+      e.stopPropagation();
+      v.muted = !v.muted;
+      sync();
+    });
+    bFull.addEventListener('click', function (e) {
+      e.stopPropagation();
+      openFull(src, v.currentTime);
+    });
+
+    v.muted = !!opts.muted;
+    setTimeout(sync, 50);
+    return wrap;
+  }
+
+  var fsEl = null;
+  function openFull(src, at) {
+    closeFull();
+    var ov = document.createElement('div');
+    ov.className = 'lgvid-fs';
+
+    var close = document.createElement('button');
+    close.type = 'button';
+    close.className = 'lgvid-close';
+    close.textContent = '关闭';
+
+    var player = buildPlayer(src);
+    ov.appendChild(player);
+    ov.appendChild(close);
+    document.body.appendChild(ov);
+    fsEl = ov;
+
+    var v = player.querySelector('video');
+    try {
+      v.currentTime = at || 0;
+      var p = v.play();
+      if (p && p.catch) p.catch(function () {});
+    } catch (e) {}
+
+    close.addEventListener('click', function (e) {
+      e.stopPropagation();
+      closeFull();
+    });
+    ov.addEventListener('click', function (e) {
+      if (e.target === ov) closeFull();
+    });
+  }
+  function closeFull() {
+    if (!fsEl) return;
+    var v = fsEl.querySelector('video');
+    if (v) { try { v.pause(); v.removeAttribute('src'); } catch (e) {} }
+    try { fsEl.remove(); } catch (e) {}
+    fsEl = null;
   }
 
   /* ---------- 按钮注入 ---------- */
@@ -35460,7 +35586,6 @@ Nf(T5).use(dd).mount("#app");
   }
 
   function tick() {
-    /* 1. 官方账号：聊天页加“视频”按钮 */
     if (isOfficial()) {
       var onChat = /^#\/chat\//.test(String(location.hash || ''));
       var fab = document.querySelector('.lgvid-fab');
@@ -35475,7 +35600,7 @@ Nf(T5).use(dd).mount("#app");
       } else if (fab) {
         try { fab.remove(); } catch (e) {}
       }
-      /* 2. 动态发布弹窗加“发视频”按钮 */
+
       var card = document.querySelector('.compose-card');
       var ta = document.querySelector('.compose-textarea');
       if (card && ta && !card.querySelector('.lgvid-btn')) {
@@ -35489,31 +35614,42 @@ Nf(T5).use(dd).mount("#app");
       }
     }
 
-    /* 3. 所有人：把视频地址的图片换成播放器 */
-    var nodes = document.querySelectorAll('img.bubble-img, .moment-images img, .compose-thumb img');
+    /* 所有人：视频地址的图片换成自绘播放器 */
+    var nodes = document.querySelectorAll('img.bubble-img, .moment-images img');
     for (var i = 0; i < nodes.length; i++) {
       var img = nodes[i];
       var src = img.getAttribute('src') || '';
-      if (!isVideoUrl(src) || img.getAttribute('data-lgvid') === '1') continue;
-      var v = document.createElement('video');
-      v.src = src;
-      v.controls = true;
-      v.playsInline = true;
-      v.setAttribute('playsinline', '');
-      v.setAttribute('webkit-playsinline', '');
-      v.preload = 'metadata';
-      v.className = (img.className || '') + ' lgvid-player';
-      if (img.closest('.moment-images')) v.classList.add('lgvid-moment');
-      try { img.parentNode.replaceChild(v, img); } catch (e) {}
+      if (!isVideoUrl(src)) continue;
+      if (img.getAttribute('data-lgvid') === '1') continue;
+      img.setAttribute('data-lgvid', '1');
+      var player = buildPlayer(src);
+      if (img.closest('.moment-images')) player.classList.add('lgvid-moment');
+      try { img.parentNode.replaceChild(player, img); } catch (e) {}
     }
   }
 
-  setInterval(function () {
-    try { tick(); } catch (e) {}
-  }, 700);
+  setInterval(function () { try { tick(); } catch (e) {} }, 700);
   window.addEventListener('load', function () { setTimeout(tick, 400); });
-})();
 
+  /* ---------- 自动清掉旧缓存页面 ---------- */
+  (function autoUpdate() {
+    try {
+      var meta = document.querySelector('meta[name="lg-build"]');
+      if (!meta) return;
+      var cur = meta.getAttribute('content') || '';
+      fetch('version.json?t=' + Date.now(), { cache: 'no-store' })
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (j) {
+          if (!j || !j.build || j.build === cur) return;
+          var q = location.search || '';
+          if (q.indexOf(j.build) >= 0) return;
+          var url = location.pathname + '?b=' + encodeURIComponent(j.build) + (location.hash || '');
+          location.replace(url);
+        })
+        .catch(function () {});
+    } catch (e) {}
+  })();
+})();
 </script>
 </body>
 </html>
