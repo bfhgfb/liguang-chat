@@ -1,5 +1,5 @@
-/* 小杜 Service Worker · 离线缓存 */
-const CACHE = 'xiaodu-v28'
+/* 小杜 Service Worker · 离线缓存 + 消息通知 */
+const CACHE = 'xiaodu-v30'
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png']
 
 self.addEventListener('install', event => {
@@ -58,5 +58,63 @@ self.addEventListener('fetch', event => {
         })
         .catch(() => cached)
     })
+  )
+})
+
+/* ---------- 消息 / 来电通知 ---------- */
+self.addEventListener('push', event => {
+  let data = {}
+  try {
+    data = event.data ? event.data.json() : {}
+  } catch (e) {
+    data = {}
+  }
+  const title = data.title || '新消息'
+  const body = data.body || ''
+
+  event.waitUntil(
+    (async () => {
+      try {
+        const list = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
+        const visible = list.some(c => c.visibilityState === 'visible')
+        if (visible) return
+      } catch (e) {}
+
+      const isCall = !!data.requireInteraction
+      await self.registration.showNotification(title, {
+        body,
+        icon: './icons/icon-192.png',
+        badge: './icons/icon-192.png',
+        tag: data.tag || 'lg-message',
+        renotify: true,
+        requireInteraction: isCall,
+        vibrate: isCall ? [300, 120, 300, 120, 300] : [120],
+        data: { url: data.url || './' }
+      })
+    })()
+  )
+})
+
+self.addEventListener('notificationclick', event => {
+  event.notification.close()
+  const target = (event.notification.data && event.notification.data.url) || './'
+
+  event.waitUntil(
+    (async () => {
+      try {
+        const list = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
+        if (list.length) {
+          const c = list[0]
+          try {
+            await c.focus()
+          } catch (e) {}
+          c.postMessage({ type: 'lg-navigate', url: target })
+          return
+        }
+      } catch (e) {}
+      try {
+        await self.clients.openWindow(target)
+      } catch (e) {}
+    })()
   )
 })
