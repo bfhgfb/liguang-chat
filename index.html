@@ -13,162 +13,10 @@
   <link rel="icon" href="./icons/icon-192.png" />
   <title>小杜</title>
   <script>
-    /* 旧媒体地址改写：历史消息里的图片/视频链接仍是 supabase.co，
-       开启反代后自动换成新地址，避免老内容打不开。 */
-    (function fixMedia() {
-      /* 后端地址脚本在下面才执行，等它跑完再判断 */
-      if (!window.__SB_URL__) { setTimeout(fixMedia, 0); return; }
-      var FROM = 'https://dxibubacwhdsibiggqgg.supabase.co';
-      var TO = window.__SB_BASE__;
-      function fix(el) {
-        try {
-          if (el.tagName === 'IMG' || el.tagName === 'VIDEO' || el.tagName === 'SOURCE' || el.tagName === 'AUDIO') {
-            var src = el.getAttribute('src');
-            if (src && src.indexOf(FROM) === 0) el.setAttribute('src', TO + src.slice(FROM.length));
-            var ps = el.getAttribute('poster');
-            if (ps && ps.indexOf(FROM) === 0) el.setAttribute('poster', TO + ps.slice(FROM.length));
-          }
-        } catch (e) {}
-      }
-      var mo = new MutationObserver(function (list) {
-        for (var i = 0; i < list.length; i++) {
-          var n = list[i];
-          if (n.type === 'attributes' && n.target) fix(n.target);
-          var added = n.addedNodes || [];
-          for (var j = 0; j < added.length; j++) {
-            var el = added[j];
-            if (!el || el.nodeType !== 1) continue;
-            fix(el);
-            var kids = el.querySelectorAll ? el.querySelectorAll('img,video,source,audio') : [];
-            for (var k = 0; k < kids.length; k++) fix(kids[k]);
-          }
-        }
-      });
-      mo.observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['src', 'poster'] });
-    })();
-  </script>
-  <script>
-    /* ===== 后端地址开关 =====
-       留空 = 直连 Supabase（默认）。
-       若部分用户连不上后端，把 Cloudflare Worker 反代地址填在这里，例如
-       window.__SB_URL__ = "https://supabase-proxy.xxx.workers.dev";
-       只改这一处即可，登录/消息/文件/实时全部走新地址。 */
+    /* ===== 后端地址：直连 Supabase ===== */
     window.__SB_DIRECT__ = "https://dxibubacwhdsibiggqgg.supabase.co";
-    /* 反代地址（Cloudflare Worker），直连不通时自动切换到这里 */
-    window.__SB_PROXY__ = "https://supa-proxy.2135187763.workers.dev";
-    (function () {
-      var ep = null;
-      try { ep = localStorage.getItem('lg_ep'); } catch (e) {}
-      var useProxy;
-      if (ep === 'proxy' || ep === 'direct') {
-        useProxy = ep === 'proxy';
-      } else {
-        try { useProxy = localStorage.getItem('lg_use_proxy') === '1'; } catch (e) { useProxy = false; }
-      }
-      window.__SB_BASE__ = (useProxy && window.__SB_PROXY__ ? window.__SB_PROXY__ : window.__SB_DIRECT__).replace(/\/+$/, "");
-      window.__SB_URL__ = window.__SB_BASE__ === window.__SB_PROXY__ ? window.__SB_PROXY__ : "";
-    })();
-
-    /* 测一条线路通不通（默认 2.5 秒超时）。任何 HTTP 响应都算通，只有网络层失败才算不通。 */
-    window.__lgProbe = function (base, ms) {
-      return new Promise(function (resolve) {
-        if (!base) return resolve(false);
-        var done = false, ctrl = window.AbortController ? new AbortController() : null;
-        var timer = setTimeout(function () {
-          if (done) return;
-          done = true;
-          try { ctrl && ctrl.abort(); } catch (e) {}
-          resolve(false);
-        }, ms || 2500);
-        fetch(base.replace(/\/+$/, "") + "/auth/v1/health?_=" + Date.now(), {
-          method: "GET",
-          cache: "no-store",
-          signal: ctrl ? ctrl.signal : undefined
-        }).then(function (r) {
-          if (done) return;
-          done = true;
-          clearTimeout(timer);
-          resolve(!!r && r.status > 0);
-        }).catch(function () {
-          if (done) return;
-          done = true;
-          clearTimeout(timer);
-          resolve(false);
-        });
-      });
-    };
-
-    /* 选线路：两条同时测，谁通用谁；都通就保持原来的。结果缓存 10 分钟。 */
-    window.__lgPickEndpoint = function (force) {
-      var now = Date.now(), ep = null, at = 0;
-      try {
-        ep = localStorage.getItem('lg_ep');
-        at = parseInt(localStorage.getItem('lg_ep_at') || '0', 10);
-      } catch (e) {}
-      if (!force && (ep === 'direct' || ep === 'proxy') && now - at < 600000) return Promise.resolve(ep);
-      var p1 = window.__lgProbe(window.__SB_DIRECT__, 2500).then(function (ok) { return ok ? 'direct' : ''; });
-      var p2 = window.__lgProbe(window.__SB_PROXY__, 4000).then(function (ok) { return ok ? 'proxy' : ''; });
-      return Promise.all([p1, p2]).then(function (r) {
-        var pick = '';
-        if (r[0] && r[1]) pick = ep === 'proxy' ? 'proxy' : 'direct';
-        else if (r[0]) pick = 'direct';
-        else if (r[1]) pick = 'proxy';
-        if (pick) {
-          try {
-            localStorage.setItem('lg_ep', pick);
-            localStorage.setItem('lg_ep_at', String(now));
-            localStorage.setItem('lg_use_proxy', pick === 'proxy' ? '1' : '0');
-          } catch (e) {}
-        }
-        return pick;
-      });
-    };
-
-    /* 启动时后台测一次：发现另一条线路可用就切过去刷新，每次打开最多切一次。 */
-    (function () {
-      if (!window.__SB_PROXY__) return;
-      window.__lgPickEndpoint().then(function (pick) {
-        if (!pick) return;
-        var want = pick === 'proxy' ? window.__SB_PROXY__ : window.__SB_DIRECT__;
-        if (want === window.__SB_BASE__) return;
-        var n = 0;
-        try { n = parseInt(sessionStorage.getItem('lg_ep_sw') || '0', 10); } catch (e) {}
-        if (n >= 1) return;
-        try { sessionStorage.setItem('lg_ep_sw', String(n + 1)); } catch (e) {}
-        setTimeout(function () { location.reload(); }, 200);
-      }).catch(function () {});
-    })();
-
-    /* 网络出错时，右下角出现「点我检测」小按钮 */
-    window.__lgNetFail = function () {
-      if (document.getElementById('lg-net-fix')) return;
-      var b = document.createElement('div');
-      b.id = 'lg-net-fix';
-      b.textContent = '网络不通？点我检测';
-      b.style.cssText = 'position:fixed;right:14px;bottom:96px;z-index:2147483000;background:#ff3b30;color:#fff;font:600 14px/1 -apple-system,"PingFang SC",sans-serif;padding:12px 16px;border-radius:22px;box-shadow:0 4px 14px rgba(0,0,0,.25)';
-      b.addEventListener('click', function () {
-        if (b.getAttribute('data-busy')) return;
-        b.setAttribute('data-busy', '1');
-        b.textContent = '检测中…';
-        window.__lgPickEndpoint(true).then(function (pick) {
-          var want = pick === 'proxy' ? window.__SB_PROXY__ : pick === 'direct' ? window.__SB_DIRECT__ : '';
-          if (pick && want && want !== window.__SB_BASE__) {
-            b.textContent = '换线路中…';
-            setTimeout(function () { location.reload(); }, 300);
-            return;
-          }
-          b.textContent = pick ? '线路正常，请再试一次' : '两条线路都不通，换 Wi-Fi / 4G 试试';
-          setTimeout(function () {
-            b.textContent = '网络不通？点我检测';
-            b.removeAttribute('data-busy');
-          }, 2600);
-        }).catch(function () {
-          b.textContent = '检测失败，请稍后再试';
-          b.removeAttribute('data-busy');
-        });
-      });
-      document.body.appendChild(b);
-    };
+    window.__SB_BASE__ = window.__SB_DIRECT__.replace(/\/+$/, "");
+    window.__SB_URL__ = "";
   </script>
   <script>
     /* 通话中转 TURN 配置：使用 OpenRelay 的 static-auth 中继，前端用共享密钥动态生成
@@ -16282,20 +16130,7 @@ function lgNetReason(t) {
 
 function la(t) {
     if (Or(t)) {
-        try {
-            typeof window.__lgNetFail === "function" && window.__lgNetFail()
-        } catch (e) {}
-        var n = 0;
-        try { n = parseInt(sessionStorage.getItem('lg_ep_sw') || '0', 10) } catch (e) {}
-        if (window.__SB_PROXY__ && window.__SB_DIRECT__ && n < 1) {
-            try { sessionStorage.setItem('lg_ep_sw', '1') } catch (e) {}
-            window.__lgPickEndpoint(!0).then(function (pick) {
-                var want = pick === 'proxy' ? window.__SB_PROXY__ : pick === 'direct' ? window.__SB_DIRECT__ : "";
-                if (want && want !== window.__SB_BASE__) setTimeout(function () { location.reload() }, 300)
-            }).catch(function () {});
-            return new Error("网络不太稳，正在换一条线路重试…")
-        }
-        return new Error("连不上服务器：" + lgNetReason(t) + "。可以点右下角「网络不通？点我检测」，或切换 Wi-Fi / 4G 再试。")
+        return new Error("连不上服务器：" + lgNetReason(t) + "。请切换 Wi-Fi / 4G，或把手机时间设为自动后再试。")
     }
     return Pe(t)
 }
@@ -18248,33 +18083,6 @@ function lgAgoraAppId() {
     return String(window.__AGORA_APP_ID__ || "")
 }
 
-/* 向 Cloudflare Worker 申请本次通话的 Token（频道 + 自己的 uid）。
-   拿不到 Token 就自动退回原来的直连方式，不会影响同网络通话。 */
-async function lgFetchToken(ch, uid) {
-    var base = String(window.__AGORA_TOKEN_URL__ || window.__SB_PROXY__ || "").replace(/\/+$/, "");
-    if (!base) return "";
-    var ctrl = new AbortController,
-        tm = setTimeout(function () {
-            ctrl.abort()
-        }, 5e3);
-    try {
-        var r;
-        try {
-            r = await fetch(base + "/agora-token?channel=" + encodeURIComponent(ch) + "&uid=" + uid, {
-                cache: "no-store",
-                signal: ctrl.signal
-            })
-        } finally {
-            clearTimeout(tm)
-        }
-        if (!r.ok) return "";
-        var d = await r.json();
-        return d && d.token ? String(d.token) : ""
-    } catch (e) {
-        return ""
-    }
-}
-
 async function lgAgPrepare() {
     lgToken = "";
     try {
@@ -18289,7 +18097,6 @@ async function lgAgPrepare() {
     } catch (e) {
         t = ""
     }
-    if (!t) t = await lgFetchToken(W.callId, uid);
     return t ? (lgToken = t, !0) : !1
 }
 

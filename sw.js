@@ -1,5 +1,5 @@
 /* 小杜 Service Worker · 离线缓存 + 消息通知 */
-const CACHE = 'xiaodu-v47'
+const CACHE = 'xiaodu-v48'
 const SHELL = ['./', './index.html', './manifest.webmanifest', './agora.js', './icons/icon-192.png', './icons/icon-512.png']
 
 self.addEventListener('install', event => {
