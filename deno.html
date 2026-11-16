@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#f2f2f6">
+<title>小杜 · 备用线路部署</title>
+<style>
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{margin:0;padding:18px 16px 40px;background:#f2f2f6;color:#1c1c1e;
+       font:15px/1.7 -apple-system,BlinkMacSystemFont,"PingFang SC","Helvetica Neue",sans-serif}
+  h1{font-size:20px;margin:0 0 4px}
+  .sub{color:#8e8e93;font-size:13px;margin:0 0 16px}
+  .card{background:#fff;border-radius:14px;padding:16px;margin-bottom:12px;
+        box-shadow:0 1px 2px rgba(0,0,0,.04)}
+  ol{margin:0;padding-left:20px}
+  ol li{margin-bottom:8px}
+  code{background:#f2f2f7;padding:2px 6px;border-radius:5px;font-size:13px}
+  button{width:100%;padding:15px;border:0;border-radius:12px;font-size:16px;font-weight:600;margin:4px 0 12px}
+  #copy{background:#0a84ff;color:#fff}
+  #copy:active{opacity:.75}
+  pre{background:#1c1c1e;color:#e5e5ea;padding:12px;border-radius:12px;max-height:240px;overflow:auto;
+      font:11px/1.5 ui-monospace,Menlo,monospace;white-space:pre-wrap;word-break:break-all;margin:0}
+  .hint{color:#8e8e93;font-size:12px;margin:8px 0 0}
+</style>
+</head>
+<body>
+<h1>小杜 · 备用线路部署</h1>
+<p class="sub">给那些「连不上服务器」的朋友用。部署一次，以后长期有效，免费。</p>
+
+<div class="card">
+  <ol>
+    <li>手机浏览器打开 <code>dash.deno.com</code>，用 GitHub 登录</li>
+    <li>点 <b>New Playground</b>（新建 Playground）</li>
+    <li>回到本页，点下面的「复制代码」</li>
+    <li>把代码粘到左边那个编辑器里（全选删掉原有的，再粘贴）</li>
+    <li>点 <b>Deploy</b>，等几秒，会得到一个 <code>https://xxxx.deno.dev</code> 地址</li>
+    <li>把这个地址发给我，我来接到 App 里</li>
+  </ol>
+</div>
+
+<button id="copy">复制代码</button>
+<pre id="code">加载中…</pre>
+<p class="hint">部署完可以先用浏览器打开那个 deno.dev 地址，看到「小杜线路正常」就说明成功了。</p>
+
+<script>
+(function () {
+  var pre = document.getElementById('code');
+  var btn = document.getElementById('copy');
+  var text = '';
+
+  fetch('./deno/main.ts', { cache: 'no-store' })
+    .then(function (r) { return r.text(); })
+    .then(function (t) { text = t; pre.textContent = t; })
+    .catch(function () { pre.textContent = '加载失败，请刷新本页重试'; });
+
+  function fallback() {
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.cssText = 'position:fixed;opacity:0';
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy'); } catch (e) {}
+    document.body.removeChild(ta);
+  }
+
+  btn.addEventListener('click', function () {
+    if (!text) return;
+    var done = function () {
+      btn.textContent = '已复制 ✓';
+      setTimeout(function () { btn.textContent = '复制代码'; }, 2000);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done).catch(function () { fallback(); done(); });
+    } else {
+      fallback();
+      done();
+    }
+  });
+})();
+</script>
+</body>
+</html>

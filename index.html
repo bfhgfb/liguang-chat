@@ -13,10 +13,75 @@
   <link rel="icon" href="./icons/icon-192.png" />
   <title>小杜</title>
   <script>
-    /* ===== 后端地址：直连 Supabase ===== */
+    /* ===== 后端地址：直连 Supabase =====
+       备用线路（Deno 中转）部署好后，把地址填到 __SB_RELAY__ 里，
+       例如 "https://xiaodu.deno.dev"。留空则完全只走直连。 */
     window.__SB_DIRECT__ = "https://dxibubacwhdsibiggqgg.supabase.co";
-    window.__SB_BASE__ = window.__SB_DIRECT__.replace(/\/+$/, "");
-    window.__SB_URL__ = "";
+    window.__SB_RELAY__ = "";
+    (function () {
+      var relay = "";
+      try { relay = localStorage.getItem('lg_relay') || ""; } catch (e) {}
+      var R = String(window.__SB_RELAY__ || "").replace(/\/+$/, "");
+      if (!R || relay.replace(/\/+$/, "") !== R) relay = "";
+      window.__SB_BASE__ = relay || window.__SB_DIRECT__.replace(/\/+$/, "");
+      window.__SB_URL__ = relay;
+    })();
+
+    /* 测一条线路通不通（任何 HTTP 响应都算通） */
+    window.__lgHealth = function (base, ms) {
+      return new Promise(function (resolve) {
+        if (!base) return resolve(false);
+        var done = false, ctrl = window.AbortController ? new AbortController() : null;
+        var timer = setTimeout(function () {
+          if (done) return;
+          done = true;
+          try { ctrl && ctrl.abort(); } catch (e) {}
+          resolve(false);
+        }, ms || 3000);
+        fetch(String(base).replace(/\/+$/, "") + "/auth/v1/health?_=" + Date.now(), {
+          cache: "no-store",
+          signal: ctrl ? ctrl.signal : undefined
+        }).then(function (r) {
+          if (done) return;
+          done = true;
+          clearTimeout(timer);
+          resolve(!!r && r.status > 0);
+        }).catch(function () {
+          if (done) return;
+          done = true;
+          clearTimeout(timer);
+          resolve(false);
+        });
+      });
+    };
+
+    /* 启动时：直连先测，只有直连不通才去试备用线路。每次打开最多重载 2 次。 */
+    (function () {
+      var R = String(window.__SB_RELAY__ || "").replace(/\/+$/, "");
+      if (!R) return;
+      var cur = window.__SB_BASE__, n = 0;
+      try { n = parseInt(sessionStorage.getItem('lg_rt') || '0', 10) } catch (e) {}
+      if (n >= 2) return;
+      function go(base) {
+        try { sessionStorage.setItem('lg_rt', String(n + 1)) } catch (e) {}
+        if (base !== cur) setTimeout(function () { location.reload(); }, 200);
+      }
+      window.__lgHealth(window.__SB_DIRECT__, 2500).then(function (ok) {
+        if (ok) {
+          if (cur !== window.__SB_DIRECT__) {
+            try { localStorage.removeItem('lg_relay'); } catch (e) {}
+            go(window.__SB_DIRECT__);
+          }
+          return;
+        }
+        return window.__lgHealth(R, 5000).then(function (ok2) {
+          if (ok2 && cur !== R) {
+            try { localStorage.setItem('lg_relay', R); } catch (e) {}
+            go(R);
+          }
+        });
+      }).catch(function () {});
+    })();
   </script>
   <script>
     /* 通话中转 TURN 配置：使用 OpenRelay 的 static-auth 中继，前端用共享密钥动态生成
@@ -16130,6 +16195,15 @@ function lgNetReason(t) {
 
 function la(t) {
     if (Or(t)) {
+        var R = String(window.__SB_RELAY__ || "").replace(/\/+$/, "");
+        if (R && window.__SB_BASE__ !== R) {
+            window.__lgHealth(R, 5000).then(function (ok) {
+                if (!ok) return;
+                try { localStorage.setItem('lg_relay', R) } catch (e) {}
+                location.reload()
+            }).catch(function () {});
+            return new Error("连不上直连线路，正在尝试备用线路…")
+        }
         return new Error("连不上服务器：" + lgNetReason(t) + "。请切换 Wi-Fi / 4G，或把手机时间设为自动后再试。")
     }
     return Pe(t)
