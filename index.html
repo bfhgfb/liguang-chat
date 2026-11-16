@@ -19221,7 +19221,7 @@ const Sm = {
                     const Y = i.value;
                     return !Y ? "聊天" : Y.type === "direct" && Y.peer ? Y.title + " · " + LgPresenceOf(Y.peer).text : Y.title
                 }),
-                o = me(() => Sp(n)),
+                o = me(() => Sp(n).filter(function (m) { return !(window.__lgHiddenIds && window.__lgHiddenIds(n).indexOf(m.id) >= 0) })),
                 a = se(""),
                 l = se(!1),
                 x = se(null),
@@ -19525,11 +19525,13 @@ const Sm = {
                         const ae = await xd(ie.content);
                         te(ae ? "已复制" : "复制失败")
                     } else if (Y === "recall") try {
-                        await Tp(n, ie.id), te("已撤回")
+                        await Tp(n, ie.id), window.__lgPurge && window.__lgPurge(ie.content), te("已撤回")
                     } catch (ae) {
                         te(ae.message || "撤回失败")
                     } else if (Y === "delete") try {
-                        await Rp(n, ie.id), te("已删除")
+                        window.__lgHideMark && window.__lgHideMark(n, ie.id);
+                        const _arr = b.messages[n] || [], _ix = _arr.findIndex(function (x) { return x.id === ie.id });
+                        _ix > -1 && _arr.splice(_ix, 1), te("已删除")
                     } catch (ae) {
                         te(ae.message || "删除失败")
                     }
@@ -35153,6 +35155,41 @@ Nf(T5).use(dd).mount("#app");
 
   function isVideoUrl(u) { return !!u && VID.test(String(u)); }
 
+  /* ---------- 仅自己删除 / 服务器文件清理 ---------- */
+  var HKEY = 'lg_hidden_msgs';
+  function readHidden() {
+    try { return JSON.parse(localStorage.getItem(HKEY) || '{}') || {}; } catch (e) { return {}; }
+  }
+  window.__lgHiddenIds = function (chatId) {
+    var all = readHidden();
+    var arr = all[chatId];
+    return Array.isArray(arr) ? arr : [];
+  };
+  window.__lgHideMark = function (chatId, id) {
+    try {
+      var all = readHidden();
+      var arr = Array.isArray(all[chatId]) ? all[chatId] : [];
+      if (arr.indexOf(id) < 0) arr.push(id);
+      if (arr.length > 800) arr = arr.slice(arr.length - 800);
+      all[chatId] = arr;
+      localStorage.setItem(HKEY, JSON.stringify(all));
+    } catch (e) {}
+  };
+  window.__lgPurge = function (content) {
+    var u = String(content || '');
+    var m = u.match(/\/storage\/v1\/object\/public\/media\/(.+)$/);
+    if (!m) return;
+    var s = readSession();
+    if (!s) return;
+    var path = m[1].split('?')[0];
+    try {
+      fetch(API + '/storage/v1/object/media/' + encodeURI(path), {
+        method: 'DELETE',
+        headers: { apikey: ANON, Authorization: 'Bearer ' + s.access_token }
+      }).catch(function () {});
+    } catch (e) {}
+  };
+
   /* ---------- 轻提示 ---------- */
   var toastEl = null;
   function toast(msg, keep) {
@@ -35620,11 +35657,22 @@ Nf(T5).use(dd).mount("#app");
       var img = nodes[i];
       var src = img.getAttribute('src') || '';
       if (!isVideoUrl(src)) continue;
-      if (img.getAttribute('data-lgvid') === '1') continue;
+      var next = img.nextElementSibling;
+      var hasPlayer = img.getAttribute('data-lgvid') === '1' && next && next.className && String(next.className).indexOf('lgvid-wrap') >= 0;
+      if (hasPlayer) {
+        if (next.getAttribute('data-src') === src) continue;
+        var np = buildPlayer(src);
+        np.setAttribute('data-src', src);
+        if (img.closest('.moment-images')) np.classList.add('lgvid-moment');
+        try { next.parentNode.replaceChild(np, next); } catch (e) {}
+        continue;
+      }
       img.setAttribute('data-lgvid', '1');
+      try { img.style.display = 'none'; } catch (e) {}
       var player = buildPlayer(src);
+      player.setAttribute('data-src', src);
       if (img.closest('.moment-images')) player.classList.add('lgvid-moment');
-      try { img.parentNode.replaceChild(player, img); } catch (e) {}
+      try { if (img.parentNode) img.parentNode.insertBefore(player, img.nextSibling); } catch (e) {}
     }
   }
 
