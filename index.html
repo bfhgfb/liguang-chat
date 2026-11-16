@@ -35679,24 +35679,36 @@ Nf(T5).use(dd).mount("#app");
   setInterval(function () { try { tick(); } catch (e) {} }, 700);
   window.addEventListener('load', function () { setTimeout(tick, 400); });
 
-  /* ---------- 防御：安卓手势返回后路由卡住时自动恢复 ---------- */
-  (function fixStuck() {
+  /* ---------- 防御：返回后页面卡在聊天页时强制回到列表 ---------- */
+  (function tabGuard() {
     var TAB = /^#\/(chats|contacts|ai|moments|me)(\?|$)/;
-    function check() {
+    var busy = false;
+    function chatDom() {
+      try { return document.querySelector('.composer, .chat-body, .msg-row'); } catch (e) { return null; }
+    }
+    function force() {
+      if (busy) return;
+      if (!chatDom()) return;
+      busy = true;
+      try { location.replace(location.pathname + location.search + '#/chats'); } catch (e) {}
+      setTimeout(function () { try { location.reload(); } catch (e) {} }, 150);
+    }
+    function afterNav() {
       try {
-        var h = String(location.hash || '');
-        if (!TAB.test(h)) return;
-        if (!document.querySelector('.composer')) return;
-        window.dispatchEvent(new Event('resize'));
-        setTimeout(function () {
-          if (document.querySelector('.composer')) {
-            try { location.reload(); } catch (e) {}
-          }
-        }, 420);
+        if (!TAB.test(String(location.hash || ''))) return;
+        setTimeout(function () { if (chatDom()) force(); }, 450);
       } catch (e) {}
     }
-    window.addEventListener('popstate', function () { setTimeout(check, 60); });
-    window.addEventListener('hashchange', function () { setTimeout(check, 60); });
+    window.addEventListener('popstate', afterNav);
+    window.addEventListener('hashchange', afterNav);
+    document.addEventListener('click', function (ev) {
+      var el = ev.target;
+      try {
+        if (el && el.closest && el.closest('[aria-label="返回"]')) {
+          setTimeout(function () { if (chatDom()) force(); }, 520);
+        }
+      } catch (e) {}
+    }, true);
   })();
 
   /* ---------- 自动清掉旧缓存页面 ---------- */
