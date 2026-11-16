@@ -17578,7 +17578,7 @@ const Mt = (t, e) => {
             const s = me(() => {
                     if (e.src) return e.src;
                     const l = Vs(e.id);
-                    return l && l.avatar_url || ""
+                    return l ? l.avatar_url || (l.is_official ? "" : "./icons/default-avatar.png") : ""
                 }),
                 i = me(() => {
                     if (e.src) return !1;
