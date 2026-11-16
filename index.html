@@ -34532,14 +34532,14 @@ const wx = Xv(Zv),
                 }
             }
 
-            function Te() {
-                if (window.confirm("确定清空所有 AI 对话吗？")) {
-                    i.value = [];
-                    try {
-                        localStorage.removeItem(pi)
-                    } catch (J) {}
-                    x.value = !1, te("已清空")
-                }
+            async function Te() {
+                const ok = window.__lgConfirm ? await window.__lgConfirm("确定清空所有 AI 对话吗？") : window.confirm("确定清空所有 AI 对话吗？");
+                if (!ok) return;
+                i.value = [];
+                try {
+                    localStorage.removeItem(pi)
+                } catch (J) {}
+                x.value = !1, te("已清空")
             }
             async function loadAIConfig() {
                 try {
@@ -35675,6 +35675,47 @@ Nf(T5).use(dd).mount("#app");
       try { if (img.parentNode) img.parentNode.insertBefore(player, img.nextSibling); } catch (e) {}
     }
   }
+
+  /* ---------- 应用内确认框（替代系统弹窗） ---------- */
+  (function confirmBox() {
+    var style = document.createElement('style');
+    style.textContent =
+      '#lgcf{position:fixed;inset:0;z-index:900;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;padding:24px}' +
+      '.lgcf-card{width:100%;max-width:320px;background:#fff;border-radius:18px;padding:22px 18px 14px;text-align:center;box-shadow:0 12px 40px rgba(0,0,0,.2)}' +
+      '.lgcf-msg{font-size:15px;color:#1b1b1f;line-height:1.65;margin-bottom:18px;white-space:pre-wrap;word-break:break-word}' +
+      '.lgcf-row{display:flex;gap:10px}' +
+      '.lgcf-cancel,.lgcf-ok{flex:1;height:42px;border:0;border-radius:12px;font-size:14.5px;font-weight:700}' +
+      '.lgcf-cancel{background:#f2f2f5;color:#55555f}' +
+      '.lgcf-ok{background:#ffd400;color:#1b1b1f}';
+    document.head.appendChild(style);
+    window.__lgConfirm = function (msg) {
+      return new Promise(function (resolve) {
+        var mask = document.createElement('div');
+        mask.id = 'lgcf';
+        var card = document.createElement('div');
+        card.className = 'lgcf-card';
+        var m = document.createElement('div');
+        m.className = 'lgcf-msg';
+        m.textContent = String(msg || '');
+        var row = document.createElement('div');
+        row.className = 'lgcf-row';
+        var cancel = document.createElement('button');
+        cancel.className = 'lgcf-cancel';
+        cancel.textContent = '取消';
+        var ok = document.createElement('button');
+        ok.className = 'lgcf-ok';
+        ok.textContent = '确定';
+        row.appendChild(cancel); row.appendChild(ok);
+        card.appendChild(m); card.appendChild(row);
+        mask.appendChild(card);
+        function done(v) { try { mask.remove(); } catch (e) {} resolve(v); }
+        cancel.onclick = function () { done(false); };
+        ok.onclick = function () { done(true); };
+        mask.addEventListener('click', function (e) { if (e.target === mask) done(false); });
+        document.body.appendChild(mask);
+      });
+    };
+  })();
 
   setInterval(function () { try { tick(); } catch (e) {} }, 700);
   window.addEventListener('load', function () { setTimeout(tick, 400); });
