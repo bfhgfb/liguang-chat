@@ -17257,40 +17257,16 @@ const a6 = {
             function i(o) {
                 e.path !== o && r.push(o)
             }
-            try {
-                window.__xd = {
-                    push: i,
-                    path: () => {
-                        try {
-                            return e.path || ""
-                        } catch (x) {
-                            return ""
-                        }
-                    },
-                    me: () => {
-                        try {
-                            var st = window.__xdStore;
-                            return st && st.me ? st.me : null
-                        } catch (x) {
-                            return null
-                        }
-                    },
-                    unread: () => {
-                        try {
-                            var st = window.__xdStore;
-                            if (!st || !st.chats) return 0;
-                            var total = 0;
-                            for (var k = 0; k < st.chats.length; k++) total += st.chats[k].unread || 0;
-                            return total
-                        } catch (x) {
-                            return 0
-                        }
-                    }
-                }
-            } catch (x) {}
-            return () => f("i", {
-                style: "display:none"
-            })
+            return (o, a) => (R(), I("nav", a6, [(R(), I(ye, null, He(n, l => f("button", {
+                key: l.key,
+                class: Ge(["tab", {
+                    active: s.value === l.key
+                }]),
+                onClick: x => i(l.path)
+            }, [G(ge, {
+                name: l.icon,
+                size: 23
+            }, null, 8, ["name"]), f("span", null, V(l.label), 1), l.key === "chats" && Z(qo) ? (R(), I("span", x6, V(Z(qo) > 99 ? "99+" : Z(qo)), 1)) : xe("", !0)], 10, l6)), 64))]))
         }
     },
     cs = "小杜",
@@ -18975,9 +18951,6 @@ const b5 = {
     T5 = {
         __name: "App",
         setup(t) {
-            try {
-                window.__xdStore = b
-            } catch (x) {}
             const e = Ys(),
                 r = bt(),
                 n = me(() => Pp.value);
@@ -36282,205 +36255,6 @@ Nf(T5).use(dd).mount("#app");
         .catch(function () {});
     } catch (e) {}
   })();
-})();
-</script>
-
-<script>
-/* 小杜 · 方案A：侧滑抽屉 + 右下角 AI 悬浮球 */
-(function () {
-  var CSS = [
-    "#xd-ui{position:fixed;inset:0;z-index:700;pointer-events:none;font-family:inherit;color:#0F2237}",
-    "#xd-ui.xd-off{display:none}",
-    "#xd-stage{position:absolute;top:0;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:520px}",
-    "#xd-scrim{position:absolute;inset:0;z-index:3;background:rgba(18,42,68,.30);opacity:0;transition:opacity .22s ease;pointer-events:none}",
-    "#xd-ui.open #xd-scrim{opacity:1;pointer-events:auto}",
-    "#xd-drawer{position:absolute;left:0;top:0;bottom:0;z-index:4;width:78%;max-width:320px;display:flex;flex-direction:column;",
-    "padding:calc(env(safe-area-inset-top) + 22px) 16px calc(env(safe-area-inset-bottom) + 18px);",
-    "background:linear-gradient(170deg,rgba(255,255,255,.90),rgba(232,244,255,.84));",
-    "-webkit-backdrop-filter:blur(26px) saturate(180%);backdrop-filter:blur(26px) saturate(180%);",
-    "border-right:1px solid rgba(255,255,255,.95);border-radius:0 30px 30px 0;",
-    "box-shadow:18px 0 46px rgba(40,80,130,.20);transform:translateX(-104%);",
-    "transition:transform .28s cubic-bezier(.22,.8,.24,1);pointer-events:auto}",
-    "#xd-ui.open #xd-drawer{transform:translateX(0)}",
-    ".xd-me{display:flex;align-items:center;gap:12px;padding:6px 8px 18px;border-bottom:1px solid rgba(140,175,210,.18)}",
-    ".xd-ava{width:56px;height:56px;border-radius:19px;flex:none;display:flex;align-items:center;justify-content:center;",
-    "color:#fff;font-weight:700;font-size:19px;background:linear-gradient(135deg,#8FD3FF,#5AA9F5) center/cover no-repeat;",
-    "box-shadow:0 8px 20px rgba(80,150,220,.30)}",
-    ".xd-me b{font-size:17px;display:block}",
-    ".xd-me small{font-size:12px;color:#7C93A8;display:block;margin-top:3px}",
-    ".xd-nav{margin-top:14px;display:flex;flex-direction:column;gap:6px}",
-    ".xd-item{display:flex;align-items:center;gap:13px;padding:13px 14px;border-radius:16px;border:0;background:transparent;",
-    "font:inherit;font-size:15.5px;font-weight:600;color:#28425C;text-align:left;cursor:pointer;-webkit-appearance:none}",
-    ".xd-item svg{width:22px;height:22px;flex:none;opacity:.85}",
-    ".xd-item.on{background:rgba(255,255,255,.85);color:#1C7FE0;box-shadow:0 6px 18px rgba(80,140,200,.14)}",
-    ".xd-item:active{transform:scale(.98)}",
-    ".xd-badge{margin-left:auto;min-width:20px;height:20px;padding:0 6px;border-radius:10px;",
-    "background:linear-gradient(135deg,#67B6FF,#3E8CEE);color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center}",
-    ".xd-badge[hidden]{display:none}",
-    ".xd-foot{margin-top:auto;padding:8px 8px 0;font-size:11.5px;line-height:1.7;color:#9AAFC2}",
-    "#xd-ava{position:absolute;left:16px;bottom:calc(env(safe-area-inset-bottom) + 20px);z-index:2;width:52px;height:52px;",
-    "border-radius:18px;border:2px solid rgba(255,255,255,.85);display:flex;align-items:center;justify-content:center;",
-    "color:#fff;font-size:16px;font-weight:700;background:linear-gradient(135deg,#8FD3FF,#5AA9F5) center/cover no-repeat;",
-    "box-shadow:0 10px 24px rgba(60,130,210,.30);cursor:pointer;-webkit-appearance:none;pointer-events:auto}",
-    "#xd-ball{position:absolute;right:18px;bottom:calc(env(safe-area-inset-bottom) + 20px);z-index:2;width:58px;height:58px;",
-    "border-radius:50%;border:2px solid rgba(255,255,255,.85);background:linear-gradient(145deg,#6FC0FF,#4A8DF7);color:#fff;",
-    "font-size:13px;font-weight:700;letter-spacing:.5px;display:flex;align-items:center;justify-content:center;",
-    "box-shadow:0 12px 30px rgba(60,130,230,.42);cursor:pointer;-webkit-appearance:none;pointer-events:auto}",
-    "#xd-ball:active,#xd-ava:active{transform:scale(.94)}",
-    ".page .list{background:transparent;padding:10px 12px calc(env(safe-area-inset-bottom) + 96px)}",
-    ".page .list>.row{background:rgba(255,255,255,.68);border:1px solid rgba(255,255,255,.92);border-radius:20px;",
-    "margin-bottom:9px;padding:11px 12px;box-shadow:0 6px 20px rgba(80,130,180,.10)}",
-    ".page .list>.row:active{background:rgba(255,255,255,.92)}",
-    ".page .profile-hero{background:transparent;padding:18px 16px 10px}",
-    ".page .menu-group{background:transparent;overflow:visible;padding:0 12px}",
-    ".page .menu-item{background:rgba(255,255,255,.68);border:1px solid rgba(255,255,255,.92);border-radius:18px;",
-    "margin-bottom:8px;box-shadow:0 6px 18px rgba(80,130,180,.08)}",
-    ".page .menu-item:active{background:rgba(255,255,255,.92)}",
-    ".page .section-gap{height:6px;background:transparent}",
-    ".page .scroll{padding-bottom:104px}",
-    ".page .moment-list{background:transparent;padding-top:6px}",
-    ".page .moment-card{background:rgba(255,255,255,.68);border:1px solid rgba(255,255,255,.92);border-radius:20px;",
-    "margin:0 12px 10px;box-shadow:0 6px 20px rgba(80,130,180,.09);border-bottom:1px solid rgba(255,255,255,.92)}",
-    "#xd-ui.xd-ai #xd-ball{display:none}",
-    "#xd-ui.xd-ai #xd-ava{bottom:calc(env(safe-area-inset-bottom) + 92px)}",
-    "#xd-ui.xd-ai #xd-ava{width:44px;height:44px;border-radius:15px;font-size:14px;left:12px}",
-    ".shell{background:linear-gradient(165deg,#EAF5FF 0%,#F9FCFF 36%,#E6F1FE 70%,#D9EBFF 100%) !important}"
-  ].join("");
-  var st = document.createElement("style");
-  st.textContent = CSS;
-  document.head.appendChild(st);
-
-  var TABS = ["/chats", "/contacts", "/ai", "/moments", "/me"];
-  var built = false, lastPath = null, ui, scrim;
-
-  var ICONS = {
-    chats: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 11.6c0 4-3.8 7.2-8.5 7.2-1 0-2-.1-2.9-.4L4 20.5l1.3-3.4C4.1 15.8 3.5 13.8 3.5 11.6c0-4 3.8-7.2 8.5-7.2s8.5 3.2 8.5 7.2z"/></svg>',
-    contacts: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8.5" r="3.4"/><path d="M3.4 19.5c0-3 2.5-5.1 5.6-5.1s5.6 2.1 5.6 5.1"/><path d="M16 5.6a3.2 3.2 0 010 6"/><path d="M17.4 14.9c2 .5 3.5 2.1 3.5 4.6"/></svg>',
-    ai: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 4.6L18.5 9.5l-4.6 1.9L12 16l-1.9-4.6L5.5 9.5l4.6-1.9L12 3z"/><path d="M18.5 15.5l.9 2.1 2.1.9-2.1.9-.9 2.1-.9-2.1-2.1-.9 2.1-.9.9-2.1z"/></svg>',
-    moments: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.2" y="3.2" width="17.6" height="17.6" rx="5"/><circle cx="12" cy="12" r="3.8"/><circle cx="17.2" cy="6.8" r="1.1" fill="currentColor" stroke="none"/></svg>',
-    me: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.6"/><path d="M4.8 20.2c0-3.6 3.2-6.2 7.2-6.2s7.2 2.6 7.2 6.2"/></svg>'
-  };
-
-  function open() { refresh(); ui.classList.add("open"); }
-  function close() { ui.classList.remove("open"); }
-
-  function paintAvatar(el, me) {
-    var url = me && me.avatar_url ? String(me.avatar_url) : "";
-    if (url) {
-      el.style.backgroundImage = 'url("' + url.replace(/"/g, "%22") + '")';
-      el.textContent = "";
-    } else {
-      el.style.backgroundImage = "";
-      var nm = me ? (me.nickname || me.username || "我") : "我";
-      el.textContent = nm.slice(0, 1).toUpperCase();
-    }
-  }
-
-  function refresh() {
-    if (!window.__xd) return;
-    var p = window.__xd.path() || "";
-    var items = ui.querySelectorAll(".xd-item");
-    for (var i = 0; i < items.length; i++) {
-      items[i].classList.toggle("on", items[i].getAttribute("data-p") === p);
-    }
-    var me = window.__xd.me();
-    var name = me ? (me.nickname || me.username || "我") : "我";
-    var user = me && me.username ? "@" + me.username : "";
-    var nmEl = ui.querySelector(".xd-me b");
-    var usEl = ui.querySelector(".xd-me small");
-    if (nmEl) nmEl.textContent = name;
-    if (usEl) usEl.textContent = user;
-    paintAvatar(ui.querySelector(".xd-ava"), me);
-    paintAvatar(ui.querySelector("#xd-ava"), me);
-    var unb = window.__xd.unread() || 0;
-    var badge = ui.querySelector(".xd-badge");
-    if (badge) {
-      if (unb > 0) { badge.hidden = false; badge.textContent = unb > 99 ? "99+" : String(unb); }
-      else { badge.hidden = true; }
-    }
-  }
-
-  function sync() {
-    if (!window.__xd) return;
-    var p = window.__xd.path() || "";
-    var onTab = TABS.indexOf(p) > -1;
-    ui.classList.toggle("xd-off", !onTab);
-    ui.classList.toggle("xd-ai", p === "/ai");
-    if (p !== lastPath) {
-      lastPath = p;
-      refresh();
-      close();
-    }
-  }
-
-  function build() {
-    if (built || !window.__xd || !document.body) return;
-    built = true;
-    ui = document.createElement("div");
-    ui.id = "xd-ui";
-    ui.className = "xd-off";
-    ui.innerHTML =
-      '<div id="xd-stage">' +
-        '<div id="xd-scrim"></div>' +
-        '<aside id="xd-drawer">' +
-          '<div class="xd-me"><div class="xd-ava">我</div><div><b>我</b><small></small></div></div>' +
-          '<div class="xd-nav">' +
-            '<button class="xd-item" data-p="/chats">' + ICONS.chats + '消息<span class="xd-badge" hidden>0</span></button>' +
-            '<button class="xd-item" data-p="/contacts">' + ICONS.contacts + '联系人</button>' +
-            '<button class="xd-item" data-p="/ai">' + ICONS.ai + '小杜 AI</button>' +
-            '<button class="xd-item" data-p="/moments">' + ICONS.moments + '动态</button>' +
-            '<button class="xd-item" data-p="/me">' + ICONS.me + '我</button>' +
-          '</div>' +
-          '<div class="xd-foot">小杜 · v55<br>从屏幕左边滑一下也能打开</div>' +
-        '</aside>' +
-        '<button id="xd-ava" aria-label="打开菜单">我</button>' +
-        '<button id="xd-ball" aria-label="和小杜 AI 聊天">AI</button>' +
-      '</div>';
-    document.body.appendChild(ui);
-
-    scrim = ui.querySelector("#xd-scrim");
-    scrim.addEventListener("click", close);
-    ui.querySelector("#xd-ava").addEventListener("click", open);
-    ui.querySelector("#xd-ball").addEventListener("click", function () {
-      try { window.__xd.push("/ai"); } catch (e) {}
-      close();
-    });
-    var items = ui.querySelectorAll(".xd-item");
-    for (var i = 0; i < items.length; i++) {
-      items[i].addEventListener("click", function () {
-        var p = this.getAttribute("data-p");
-        try { window.__xd.push(p); } catch (e) {}
-        close();
-      });
-    }
-
-    /* 边缘滑动 */
-    var sx = 0, sy = 0, tracking = false;
-    document.addEventListener("touchstart", function (e) {
-      if (!e.touches || !e.touches[0]) return;
-      var x = e.touches[0].clientX;
-      sx = x; sy = e.touches[0].clientY;
-      tracking = ui.classList.contains("open") ? x < 340 : x < 26;
-    }, { passive: true });
-    document.addEventListener("touchmove", function (e) {
-      if (!tracking || !e.touches || !e.touches[0]) return;
-      var dx = e.touches[0].clientX - sx;
-      var dy = Math.abs(e.touches[0].clientY - sy);
-      if (dy > 55) { tracking = false; return; }
-      if (!ui.classList.contains("open") && dx > 56) { open(); tracking = false; }
-      else if (ui.classList.contains("open") && dx < -50) { close(); tracking = false; }
-    }, { passive: true });
-    document.addEventListener("touchend", function () { tracking = false; }, { passive: true });
-
-    refresh();
-    sync();
-    setInterval(sync, 260);
-  }
-
-  var timer = setInterval(function () {
-    if (window.__xd) { build(); clearInterval(timer); }
-  }, 120);
-  window.addEventListener("load", function () { setTimeout(build, 80); });
 })();
 </script>
 
