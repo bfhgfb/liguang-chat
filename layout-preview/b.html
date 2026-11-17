@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>方案 B · 顶部胶囊</title>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:#0d1620;display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:-apple-system,"PingFang SC","Noto Sans CJK SC",sans-serif}
+.phone{position:relative;width:390px;height:844px;overflow:hidden;border-radius:44px;
+ background:linear-gradient(168deg,#ECF6FF 0%,#FAFCFF 34%,#E6F1FE 68%,#D9EBFF 100%);color:#0F2237}
+.phone:before{content:"";position:absolute;width:400px;height:400px;left:-140px;top:-130px;border-radius:50%;
+ background:radial-gradient(circle,rgba(110,185,255,.42),transparent 68%)}
+.phone:after{content:"";position:absolute;width:360px;height:360px;right:-150px;top:300px;border-radius:50%;
+ background:radial-gradient(circle,rgba(165,150,255,.28),transparent 70%)}
+.status{position:relative;z-index:5;display:flex;justify-content:space-between;padding:16px 30px 0;font-size:13px;font-weight:600}
+.status .r{font-size:11px;letter-spacing:1px}
+.screen{position:relative;z-index:2;height:calc(100% - 34px);display:flex;flex-direction:column}
+.head{display:flex;align-items:flex-end;justify-content:space-between;padding:10px 22px 14px}
+.head h1{margin:0;font-size:28px;letter-spacing:.5px}
+.head .r{display:flex;gap:16px;font-size:19px;color:#41586E;padding-bottom:5px}
+
+/* 顶部胶囊 */
+.seg{position:relative;margin:0 18px;height:46px;border-radius:18px;background:rgba(255,255,255,.5);
+ border:1px solid rgba(255,255,255,.9);display:flex;padding:5px;box-shadow:0 6px 20px rgba(80,130,180,.10);backdrop-filter:blur(14px)}
+.seg span{flex:1;display:flex;align-items:center;justify-content:center;font-size:14.5px;font-weight:600;color:#6E879D;border-radius:14px;position:relative;z-index:2}
+.seg .on{background:#fff;color:#1C7FE0;box-shadow:0 4px 14px rgba(70,130,200,.18)}
+.seg .on:after{content:"";position:absolute;bottom:5px;width:16px;height:3px;border-radius:2px;background:#4C9BF5}
+
+/* AI 横幅 */
+.ai{margin:14px 18px 6px;padding:14px 16px;border-radius:22px;display:flex;align-items:center;gap:12px;
+ background:linear-gradient(120deg,#5FAEFF,#7C8CFB 55%,#9B7CF7);color:#fff;
+ box-shadow:0 12px 28px rgba(90,130,240,.32)}
+.ai .glow{width:38px;height:38px;border-radius:13px;background:rgba(255,255,255,.22);display:flex;align-items:center;justify-content:center;font-size:17px;border:1px solid rgba(255,255,255,.4)}
+.ai b{font-size:14.5px;display:block}.ai small{font-size:11.5px;opacity:.85;display:block;margin-top:3px}
+.ai .go{margin-left:auto;font-size:12px;background:rgba(255,255,255,.22);padding:6px 12px;border-radius:12px;border:1px solid rgba(255,255,255,.35)}
+
+/* 列表 */
+.list{flex:1;overflow:hidden;padding:8px 14px 0;display:flex;flex-direction:column;gap:9px}
+.row{display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:20px;background:rgba(255,255,255,.64);
+ border:1px solid rgba(255,255,255,.92);box-shadow:0 6px 20px rgba(80,130,180,.09)}
+.ava{width:46px;height:46px;border-radius:16px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:16px;flex:0 0 46px}
+.a1{background:linear-gradient(135deg,#7FC5FF,#4E9AF0)}.a2{background:linear-gradient(135deg,#B7A6FF,#7C7BF6)}
+.a3{background:linear-gradient(135deg,#8EE3C6,#41B99A)}.a4{background:linear-gradient(135deg,#FFC58A,#F0904C)}
+.a5{background:linear-gradient(135deg,#FFA3B8,#F06A8A)}
+.mid{flex:1;min-width:0}.nm{font-size:15px;font-weight:600;display:flex;gap:6px;align-items:center}
+.tag{font-size:10px;color:#4C8FD6;background:rgba(120,180,255,.18);padding:2px 6px;border-radius:7px}
+.pv{font-size:12.5px;color:#7C93A8;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rt{text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+.tm{font-size:11px;color:#9AAFC2}
+.badge{min-width:19px;height:19px;border-radius:10px;background:linear-gradient(135deg,#67B6FF,#3E8CEE);color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 5px}
+
+/* 底部两栏 */
+.dock{position:absolute;left:18px;right:18px;bottom:22px;height:66px;border-radius:26px;z-index:5;
+ background:rgba(255,255,255,.7);border:1px solid rgba(255,255,255,.95);backdrop-filter:blur(20px) saturate(170%);
+ box-shadow:0 14px 34px rgba(60,110,170,.18);display:flex;align-items:center;justify-content:space-between;padding:0 18px}
+.dk{display:flex;align-items:center;gap:9px;font-size:14px;font-weight:600;color:#28425C}
+.dk .mini{width:32px;height:32px;border-radius:11px;background:linear-gradient(135deg,#8FD3FF,#5AA9F5);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700}
+.plus{width:52px;height:52px;border-radius:20px;background:linear-gradient(145deg,#6FC0FF,#4A8DF7);color:#fff;
+ font-size:26px;display:flex;align-items:center;justify-content:center;box-shadow:0 10px 24px rgba(60,130,230,.4);border:2px solid rgba(255,255,255,.7)}
+@media(max-width:430px){.phone{width:100vw;height:100vh;border-radius:0}}
+</style>
+</head>
+<body>
+<div class="phone">
+  <div class="status"><span>9:41</span><span class="r">▲▮ 5G ▮</span></div>
+  <div class="screen">
+    <div class="head">
+      <h1>小杜</h1>
+      <div class="r"><span>＋</span><span>⌕</span></div>
+    </div>
+
+    <div class="seg"><span class="on">消息</span><span>联系人</span><span>动态</span></div>
+
+    <div class="ai">
+      <div class="glow">✦</div>
+      <div><b>和小杜说说话</b><small>它记得你们聊过的每一句</small></div>
+      <div class="go">进入</div>
+    </div>
+
+    <div class="list">
+      <div class="row">
+        <div class="ava a1">杜</div>
+        <div class="mid"><div class="nm">小杜官方 <span class="tag">官方</span></div><div class="pv">欢迎来到小杜，有什么想说的都可以跟我说</div></div>
+        <div class="rt"><span class="tm">刚刚</span><span class="badge">2</span></div>
+      </div>
+      <div class="row">
+        <div class="ava a2">林</div>
+        <div class="mid"><div class="nm">林小满</div><div class="pv">晚上一起吃饭吗？</div></div>
+        <div class="rt"><span class="tm">18:42</span><span class="badge">5</span></div>
+      </div>
+      <div class="row">
+        <div class="ava a3">周末</div>
+        <div class="mid"><div class="nm">周末爬山群 <span class="tag">12</span></div><div class="pv">阿杜：我带水，你们带点吃的</div></div>
+        <div class="rt"><span class="tm">17:05</span></div>
+      </div>
+      <div class="row">
+        <div class="ava a4">陈</div>
+        <div class="mid"><div class="nm">陈一鸣</div><div class="pv">[语音] 12″</div></div>
+        <div class="rt"><span class="tm">昨天</span><span class="badge">3</span></div>
+      </div>
+      <div class="row">
+        <div class="ava a5">苏</div>
+        <div class="mid"><div class="nm">苏老师</div><div class="pv">文件收到了，谢谢</div></div>
+        <div class="rt"><span class="tm">周一</span></div>
+      </div>
+    </div>
+
+    <div class="dock">
+      <div class="dk"><div class="mini">杜</div>我</div>
+      <div class="plus">＋</div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

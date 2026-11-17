@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>方案 A · 侧滑抽屉</title>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:#0d1620;display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:-apple-system,"PingFang SC","Noto Sans CJK SC",sans-serif}
+.phone{position:relative;width:390px;height:844px;overflow:hidden;border-radius:44px;
+ background:linear-gradient(165deg,#EAF5FF 0%,#F8FBFF 38%,#E3F0FE 72%,#D8EBFF 100%);color:#0F2237}
+.phone:before{content:"";position:absolute;width:420px;height:420px;left:-160px;top:-120px;border-radius:50%;
+ background:radial-gradient(circle,rgba(120,190,255,.45),transparent 66%);filter:blur(10px)}
+.phone:after{content:"";position:absolute;width:380px;height:380px;right:-170px;bottom:-80px;border-radius:50%;
+ background:radial-gradient(circle,rgba(180,160,255,.32),transparent 70%);filter:blur(12px)}
+.status{position:relative;z-index:6;display:flex;justify-content:space-between;padding:16px 30px 0;font-size:13px;font-weight:600}
+.status .r{display:flex;gap:5px;align-items:center;font-size:11px;letter-spacing:1px}
+.screen{position:relative;z-index:2;height:calc(100% - 34px)}
+
+/* 主界面 */
+.top{display:flex;align-items:center;gap:12px;padding:14px 20px 6px}
+.avatar{width:40px;height:40px;border-radius:14px;background:linear-gradient(135deg,#8FD3FF,#5AA9F5);color:#fff;
+ display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;box-shadow:0 6px 16px rgba(80,150,220,.28)}
+.title{font-size:20px;font-weight:700;letter-spacing:.5px}
+.top .r{margin-left:auto;display:flex;gap:14px;color:#41586E;font-size:18px}
+.search{margin:8px 20px 12px;height:40px;border-radius:16px;background:rgba(255,255,255,.62);
+ border:1px solid rgba(255,255,255,.9);display:flex;align-items:center;padding:0 14px;gap:8px;color:#8AA0B4;font-size:13.5px;
+ box-shadow:0 4px 16px rgba(90,140,190,.08)}
+.list{padding:0 14px;display:flex;flex-direction:column;gap:9px}
+.row{display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:20px;
+ background:rgba(255,255,255,.66);border:1px solid rgba(255,255,255,.92);
+ box-shadow:0 6px 20px rgba(80,130,180,.10)}
+.row .ava{width:46px;height:46px;border-radius:16px;flex:0 0 46px;display:flex;align-items:center;justify-content:center;
+ color:#fff;font-weight:700;font-size:16px}
+.a1{background:linear-gradient(135deg,#7FC5FF,#4E9AF0)}.a2{background:linear-gradient(135deg,#B7A6FF,#7C7BF6)}
+.a3{background:linear-gradient(135deg,#8EE3C6,#41B99A)}.a4{background:linear-gradient(135deg,#FFC58A,#F0904C)}
+.mid{flex:1;min-width:0}
+.nm{font-size:15px;font-weight:600;display:flex;align-items:center;gap:6px}
+.tag{font-size:10px;font-weight:500;color:#4C8FD6;background:rgba(120,180,255,.18);padding:2px 6px;border-radius:7px}
+.pv{font-size:12.5px;color:#7C93A8;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rt{display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+.tm{font-size:11px;color:#9AAFC2}
+.badge{min-width:19px;height:19px;border-radius:10px;background:linear-gradient(135deg,#67B6FF,#3E8CEE);color:#fff;
+ font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 5px}
+
+/* 抽屉 */
+.scrim{position:absolute;inset:34px 0 0;background:rgba(20,45,70,.26);backdrop-filter:blur(2px);z-index:4}
+.drawer{position:absolute;top:0;bottom:0;left:0;width:76%;z-index:5;padding:34px 18px 20px;
+ background:linear-gradient(170deg,rgba(255,255,255,.86),rgba(235,245,255,.78));
+ backdrop-filter:blur(26px) saturate(180%);border-right:1px solid rgba(255,255,255,.95);
+ border-radius:0 34px 34px 0;box-shadow:18px 0 46px rgba(40,80,130,.18);display:flex;flex-direction:column}
+.me{display:flex;align-items:center;gap:12px;padding:10px 8px 18px;border-bottom:1px solid rgba(140,175,210,.18)}
+.me .ava{width:56px;height:56px;border-radius:19px;background:linear-gradient(135deg,#8FD3FF,#5AA9F5);color:#fff;
+ display:flex;align-items:center;justify-content:center;font-size:19px;font-weight:700;box-shadow:0 8px 20px rgba(80,150,220,.3)}
+.me b{font-size:17px}.me small{display:block;color:#7C93A8;font-size:12px;margin-top:3px}
+.nav{margin-top:16px;display:flex;flex-direction:column;gap:6px}
+.ni{display:flex;align-items:center;gap:13px;padding:13px 14px;border-radius:16px;font-size:15.5px;font-weight:600;color:#28425C}
+.ni.on{background:rgba(255,255,255,.85);color:#1C7FE0;box-shadow:0 6px 18px rgba(80,140,200,.14)}
+.ni i{width:22px;height:22px;display:block}
+.ni .dot{margin-left:auto;background:#4C9BF5;color:#fff;font-size:11px;border-radius:9px;padding:1px 7px}
+.foot{margin-top:auto;color:#9AAFC2;font-size:11.5px;padding-left:8px}
+
+/* AI 球 */
+.aiball{position:absolute;right:20px;bottom:26px;width:62px;height:62px;border-radius:50%;z-index:6;
+ background:linear-gradient(145deg,#6FC0FF,#4A8DF7);color:#fff;font-size:13px;font-weight:700;
+ display:flex;align-items:center;justify-content:center;border:2px solid rgba(255,255,255,.85);
+ box-shadow:0 12px 30px rgba(60,130,230,.42)}
+.aiball small{position:absolute;bottom:-20px;font-size:10.5px;color:#6C88A0;font-weight:500;white-space:nowrap}
+.tip{position:absolute;left:8px;top:50%;width:26px;height:2px;background:rgba(90,150,210,.35);border-radius:2px;z-index:1}
+@media(max-width:430px){.phone{width:100vw;height:100vh;border-radius:0}}
+</style>
+</head>
+<body>
+<div class="phone">
+  <div class="status"><span>9:41</span><span class="r">▲▮ 5G ▮</span></div>
+
+  <div class="screen">
+    <div class="top">
+      <div class="avatar">杜</div>
+      <div class="title">小杜</div>
+      <div class="r"><span>⌕</span><span>＋</span></div>
+    </div>
+    <div class="search"><span>⌕</span><span>搜索聊天记录</span></div>
+
+    <div class="list">
+      <div class="row">
+        <div class="ava a1">杜</div>
+        <div class="mid"><div class="nm">小杜官方 <span class="tag">官方</span></div><div class="pv">欢迎来到小杜，有什么想说的都可以跟我说</div></div>
+        <div class="rt"><span class="tm">刚刚</span><span class="badge">2</span></div>
+      </div>
+      <div class="row">
+        <div class="ava a2">林</div>
+        <div class="mid"><div class="nm">林小满</div><div class="pv">晚上一起吃饭吗？</div></div>
+        <div class="rt"><span class="tm">18:42</span><span class="badge">5</span></div>
+      </div>
+      <div class="row">
+        <div class="ava a3">周末</div>
+        <div class="mid"><div class="nm">周末爬山群 <span class="tag">12</span></div><div class="pv">阿杜：我带水，你们带点吃的</div></div>
+        <div class="rt"><span class="tm">17:05</span></div>
+      </div>
+      <div class="row">
+        <div class="ava a4">陈</div>
+        <div class="mid"><div class="nm">陈一鸣</div><div class="pv">[语音] 12″</div></div>
+        <div class="rt"><span class="tm">昨天</span><span class="badge" style="background:rgba(140,160,180,.35)">3</span></div>
+      </div>
+    </div>
+
+    <div class="aiball">AI<small>和小杜聊</small></div>
+  </div>
+
+  <!-- 抽屉展开状态 -->
+  <div class="scrim"></div>
+  <aside class="drawer">
+    <div class="me">
+      <div class="ava">杜</div>
+      <div><b>阿杜</b><small>@adu · 在线</small></div>
+    </div>
+    <div class="nav">
+      <div class="ni on"><i>▤</i>消息<span class="dot">7</span></div>
+      <div class="ni"><i>◔</i>联系人</div>
+      <div class="ni"><i>✦</i>小杜 AI</div>
+      <div class="ni"><i>▣</i>动态</div>
+      <div class="ni"><i>☺</i>我</div>
+    </div>
+    <div class="foot">小杜 · v54<br><span style="opacity:.7">从左边滑一下就能收起</span></div>
+  </aside>
+</div>
+</body>
+</html>

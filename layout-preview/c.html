@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>方案 C · 卡片首页</title>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:#0d1620;display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:-apple-system,"PingFang SC","Noto Sans CJK SC",sans-serif}
+.phone{position:relative;width:390px;height:844px;overflow:hidden;border-radius:44px;
+ background:linear-gradient(160deg,#E9F5FF 0%,#FBFDFF 30%,#E5F0FE 66%,#D6E9FF 100%);color:#0F2237}
+.phone:before{content:"";position:absolute;width:430px;height:430px;right:-180px;top:-150px;border-radius:50%;
+ background:radial-gradient(circle,rgba(120,195,255,.45),transparent 66%)}
+.phone:after{content:"";position:absolute;width:360px;height:360px;left:-170px;top:420px;border-radius:50%;
+ background:radial-gradient(circle,rgba(170,150,255,.25),transparent 70%)}
+.status{position:relative;z-index:5;display:flex;justify-content:space-between;padding:16px 30px 0;font-size:13px;font-weight:600}
+.status .r{font-size:11px;letter-spacing:1px}
+.screen{position:relative;z-index:2;height:calc(100% - 34px);padding:0 18px;overflow:hidden}
+.head{display:flex;align-items:center;padding:8px 4px 16px}
+.head .hi{font-size:12.5px;color:#7C93A8;letter-spacing:.5px}
+.head h1{margin:3px 0 0;font-size:25px;font-weight:700}
+.head .ava{margin-left:auto;width:46px;height:46px;border-radius:16px;background:linear-gradient(135deg,#8FD3FF,#5AA9F5);
+ color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;
+ border:2px solid rgba(255,255,255,.85);box-shadow:0 8px 20px rgba(80,150,220,.28)}
+
+.cards{display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px}
+.card{border-radius:20px;padding:12px 10px;background:rgba(255,255,255,.7);border:1px solid rgba(255,255,255,.95);
+ box-shadow:0 8px 22px rgba(80,130,180,.10);text-align:center}
+.card b{display:block;font-size:21px;letter-spacing:-.5px}
+.card small{display:block;font-size:10.5px;color:#7C93A8;margin-top:2px}
+.card.blue b{color:#1C7FE0}.card.violet b{color:#6C6EF0}.card.green b{color:#26A47F}
+
+.sect{display:flex;align-items:center;justify-content:space-between;margin:18px 4px 9px}
+.sect b{font-size:15px}.sect span{font-size:11.5px;color:#7FA6C8}
+
+.bigcard{border-radius:22px;background:rgba(255,255,255,.7);border:1px solid rgba(255,255,255,.95);
+ box-shadow:0 8px 24px rgba(80,130,180,.10);padding:6px 12px}
+.crow{display:flex;align-items:center;gap:11px;padding:10px 2px}
+.crow+.crow{border-top:1px solid rgba(140,175,210,.16)}
+.ava{width:42px;height:42px;border-radius:14px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:15px;flex:0 0 42px}
+.a1{background:linear-gradient(135deg,#7FC5FF,#4E9AF0)}.a2{background:linear-gradient(135deg,#B7A6FF,#7C7BF6)}
+.a3{background:linear-gradient(135deg,#8EE3C6,#41B99A)}
+.mid{flex:1;min-width:0}.nm{font-size:14.5px;font-weight:600}
+.pv{font-size:12px;color:#7C93A8;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tm{font-size:10.5px;color:#9AAFC2}
+.badge{min-width:18px;height:18px;border-radius:9px;background:#4C9BF5;color:#fff;font-size:10.5px;font-weight:700;
+ display:flex;align-items:center;justify-content:center;padding:0 5px;margin-top:5px}
+
+.aicard{margin-top:12px;border-radius:22px;padding:16px;display:flex;align-items:center;gap:13px;
+ background:linear-gradient(120deg,#5FAEFF,#7C8CFB 58%,#9B7CF7);color:#fff;box-shadow:0 14px 30px rgba(90,130,240,.30)}
+.aicard .g{width:40px;height:40px;border-radius:14px;background:rgba(255,255,255,.22);border:1px solid rgba(255,255,255,.4);
+ display:flex;align-items:center;justify-content:center;font-size:18px}
+.aicard b{font-size:14.5px;display:block}.aicard small{font-size:11.5px;opacity:.85;display:block;margin-top:3px}
+.aicard .go{margin-left:auto;font-size:11.5px;background:rgba(255,255,255,.22);padding:7px 12px;border-radius:12px;border:1px solid rgba(255,255,255,.35)}
+
+.tabs{position:absolute;left:18px;right:18px;bottom:22px;height:64px;border-radius:26px;
+ background:rgba(255,255,255,.72);border:1px solid rgba(255,255,255,.95);backdrop-filter:blur(20px) saturate(170%);
+ box-shadow:0 14px 34px rgba(60,110,170,.18);display:flex;align-items:center;justify-content:space-around;font-size:13px;font-weight:600;color:#6E879D}
+.tabs .on{color:#1C7FE0;display:flex;flex-direction:column;align-items:center;gap:2px}
+.tabs .on:after{content:"";width:16px;height:3px;border-radius:2px;background:#4C9BF5;margin-top:1px}
+.tabs .t{display:flex;flex-direction:column;align-items:center;gap:2px}
+@media(max-width:430px){.phone{width:100vw;height:100vh;border-radius:0}}
+</style>
+</head>
+<body>
+<div class="phone">
+  <div class="status"><span>9:41</span><span class="r">▲▮ 5G ▮</span></div>
+  <div class="screen">
+    <div class="head">
+      <div><div class="hi">星期四 · 晚上好</div><h1>阿杜</h1></div>
+      <div class="ava">杜</div>
+    </div>
+
+    <div class="cards">
+      <div class="card blue"><b>7</b><small>条未读</small></div>
+      <div class="card violet"><b>2</b><small>个新朋友</small></div>
+      <div class="card green"><b>5</b><small>条新动态</small></div>
+    </div>
+
+    <div class="sect"><b>最近聊天</b><span>查看全部 ›</span></div>
+    <div class="bigcard">
+      <div class="crow">
+        <div class="ava a1">杜</div>
+        <div class="mid"><div class="nm">小杜官方</div><div class="pv">欢迎来到小杜，有什么想说的都可以跟我说</div></div>
+        <div><div class="tm">刚刚</div><div class="badge">2</div></div>
+      </div>
+      <div class="crow">
+        <div class="ava a2">林</div>
+        <div class="mid"><div class="nm">林小满</div><div class="pv">晚上一起吃饭吗？</div></div>
+        <div><div class="tm">18:42</div><div class="badge">5</div></div>
+      </div>
+      <div class="crow">
+        <div class="ava a3">周末</div>
+        <div class="mid"><div class="nm">周末爬山群</div><div class="pv">阿杜：我带水，你们带点吃的</div></div>
+        <div><div class="tm">17:05</div></div>
+      </div>
+    </div>
+
+    <div class="aicard">
+      <div class="g">✦</div>
+      <div><b>小杜 AI</b><small>今天想聊点什么？</small></div>
+      <div class="go">开聊</div>
+    </div>
+
+    <div class="tabs">
+      <div class="on">首页</div>
+      <div class="t">消息</div>
+      <div class="t">我</div>
+    </div>
+  </div>
+</div>
+</body>
+</html>
