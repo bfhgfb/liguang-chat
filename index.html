@@ -36258,5 +36258,138 @@ Nf(T5).use(dd).mount("#app");
 })();
 </script>
 
+<style id="lg-glass-theme">
+/* ===== 液态玻璃风格（仅浅色模式生效，布局不动） ===== */
+body:not(.dark){
+  background:
+    radial-gradient(120% 90% at 85% -10%, rgba(255,255,255,.95) 0%, rgba(255,255,255,0) 55%),
+    radial-gradient(90% 70% at -12% 28%, rgba(186,220,248,.6) 0%, rgba(186,220,248,0) 60%),
+    radial-gradient(85% 65% at 112% 72%, rgba(255,255,255,.75) 0%, rgba(255,255,255,0) 55%),
+    radial-gradient(70% 55% at 30% 108%, rgba(200,228,250,.5) 0%, rgba(200,228,250,0) 58%),
+    linear-gradient(165deg, #e9f2fb 0%, #dcebfb 38%, #edf5fc 72%, #e3effa 100%) !important;
+}
+body:not(.dark) .shell{background:transparent !important;box-shadow:none !important}
+body:not(.dark) .view,
+body:not(.dark) .login-page,
+body:not(.dark) .search-wrap,
+body:not(.dark) .section-gap,
+body:not(.dark) .menu-gap,
+body:not(.dark) .moments-view,
+body:not(.dark) .chat-page{background:transparent !important}
+
+/* 顶部导航：玻璃 */
+body:not(.dark) .nav{
+  background:rgba(255,255,255,.42) !important;
+  -webkit-backdrop-filter:blur(24px) saturate(1.5);
+  backdrop-filter:blur(24px) saturate(1.5);
+  border-bottom:1px solid rgba(255,255,255,.6) !important;
+}
+
+/* 底部导航 */
+body:not(.dark) .tabbar{
+  background:rgba(255,255,255,.5) !important;
+  -webkit-backdrop-filter:blur(26px) saturate(1.5);
+  backdrop-filter:blur(26px) saturate(1.5);
+  border-top:1px solid rgba(255,255,255,.65) !important;
+}
+
+/* 卡片容器：毛玻璃 */
+body:not(.dark) .list,
+body:not(.dark) .menu-group,
+body:not(.dark) .moment-card,
+body:not(.dark) .confirm-card,
+body:not(.dark) .consent-card,
+body:not(.dark) .qr-card,
+body:not(.dark) .add-card,
+body:not(.dark) .compose-card{
+  background:rgba(255,255,255,.52) !important;
+  -webkit-backdrop-filter:blur(20px) saturate(1.4);
+  backdrop-filter:blur(20px) saturate(1.4);
+  border:1px solid rgba(255,255,255,.7);
+  box-shadow:0 8px 30px rgba(96,138,188,.14);
+}
+body:not(.dark) .list,
+body:not(.dark) .menu-group{border-radius:18px;margin:0 12px;overflow:hidden}
+body:not(.dark) .moment-card{border-radius:18px;margin-bottom:12px}
+body:not(.dark) .confirm-card,body:not(.dark) .consent-card,
+body:not(.dark) .qr-card,body:not(.dark) .add-card,
+body:not(.dark) .compose-card{border-radius:20px}
+
+/* 行：透明，让玻璃底透出来 */
+body:not(.dark) .row,
+body:not(.dark) .menu-item,
+body:not(.dark) .profile-card,
+body:not(.dark) .comment,
+body:not(.dark) .comment-item,
+body:not(.dark) .app-row,
+body:not(.dark) .grp-row,
+body:not(.dark) .login-card{background:transparent !important}
+body:not(.dark) .row:active,
+body:not(.dark) .menu-item:active{background:rgba(255,255,255,.4) !important}
+body:not(.dark) .divider,body:not(.dark) .divider-full{background:rgba(80,120,170,.1) !important}
+
+/* 搜索框：玻璃胶囊 */
+body:not(.dark) .search-box{
+  background:rgba(255,255,255,.55) !important;
+  border:1px solid rgba(255,255,255,.7);
+  -webkit-backdrop-filter:blur(16px);
+  backdrop-filter:blur(16px);
+}
+
+/* 聊天输入栏 */
+body:not(.dark) .composer{
+  background:rgba(255,255,255,.5) !important;
+  -webkit-backdrop-filter:blur(24px) saturate(1.4);
+  backdrop-filter:blur(24px) saturate(1.4);
+  border-top:1px solid rgba(255,255,255,.6) !important;
+}
+body:not(.dark) .composer .input,
+body:not(.dark) .composer textarea,
+body:not(.dark) .composer input{
+  background:rgba(255,255,255,.6) !important;
+  border:1px solid rgba(255,255,255,.7);
+}
+
+/* 气泡：对方=玻璃白，我方=浅蓝渐变 */
+body:not(.dark) .bubble{
+  background:rgba(255,255,255,.72) !important;
+  -webkit-backdrop-filter:blur(10px);
+  backdrop-filter:blur(10px);
+  border:1px solid rgba(255,255,255,.75);
+}
+body:not(.dark) .bubble.mine{
+  background:linear-gradient(135deg,#bfe0ff,#9ccbf7) !important;
+  border:1px solid rgba(255,255,255,.8);
+}
+
+/* 底部弹层：玻璃 */
+body:not(.dark) .sheet{
+  background:rgba(250,253,255,.78) !important;
+  -webkit-backdrop-filter:blur(28px) saturate(1.5);
+  backdrop-filter:blur(28px) saturate(1.5);
+  border-top:1px solid rgba(255,255,255,.8);
+}
+body:not(.dark) .sheet .action,
+body:not(.dark) .sheet .sheet-item,
+body:not(.dark) .sheet .cell{background:transparent !important}
+
+/* 其他输入/弹窗 */
+body:not(.dark) .input,body:not(.dark) .text-input,body:not(.dark) .textarea{
+  background:rgba(255,255,255,.6) !important;
+  border:1px solid rgba(255,255,255,.75) !important;
+}
+body:not(.dark) .login-input{background:rgba(255,255,255,.65) !important;border:1px solid rgba(255,255,255,.8) !important}
+
+/* 强调色：冰蓝 */
+body:not(.dark) .btn-primary,
+body:not(.dark) .send-btn,
+body:not(.dark) .publish-btn{
+  background:linear-gradient(135deg,#4da6ff,#2f8ff0) !important;
+  color:#fff !important;
+  box-shadow:0 8px 20px rgba(47,143,240,.35) !important;
+}
+body:not(.dark) .link{color:#2f8ff0 !important}
+</style>
+
 </body>
 </html>
